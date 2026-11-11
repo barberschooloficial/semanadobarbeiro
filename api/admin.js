@@ -8,7 +8,7 @@ const { db } = require('./_lib/db');
 const { send, handler, fail } = require('./_lib/http');
 const { PERGUNTAS, PERFIS } = require('./_lib/quiz-def');
 const { premio } = require('./_lib/premios');
-const { config } = require('./_lib/db');
+const { config, CHAVE_ERRADA } = require('./_lib/db');
 const { turmaDo, segundaDa, em } = require('./_lib/turma');
 const { agora } = require('./_lib/util');
 
@@ -34,6 +34,7 @@ module.exports = handler(['GET'], async (req, res) => {
   if (esperado.length < 8 || esperado.length !== recebido.length || !crypto.timingSafeEqual(Buffer.from(esperado), Buffer.from(recebido))) {
     return send(res, 401, { erro: 'Senha inválida' });
   }
+  if (CHAVE_ERRADA) return send(res, 500, { erro: CHAVE_ERRADA });
   const u = new URL(req.url, 'http://x');
   const ver = u.searchParams.get('ver') || 'resumo';
 
