@@ -2,8 +2,12 @@
 const REST = process.env.SUPABASE_REST_URL || `${(process.env.SUPABASE_URL || '').replace(/\/$/, '')}/rest/v1`;
 const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
+// A chave "publishable" (pública) lê vazio e não grava nada por causa do RLS: o sistema precisa da SECRET.
+const CHAVE_ERRADA = /^sb_publishable_/.test(KEY) ? 'A variável SUPABASE_SERVICE_ROLE_KEY na Vercel está com a chave "publishable". Troque pela "Secret key" (sb_secret_...) do Supabase e faça Redeploy.' : null;
+
 async function req(path, { method = 'GET', body, prefer } = {}) {
   if (!KEY) throw new Error('SUPABASE_SERVICE_ROLE_KEY não configurada');
+  if (CHAVE_ERRADA) throw new Error(CHAVE_ERRADA);
   const headers = { apikey: KEY, Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json' };
   if (prefer) headers.Prefer = prefer;
   const r = await fetch(`${REST}/${path}`, { method, headers, body: body ? JSON.stringify(body) : undefined });
@@ -59,4 +63,4 @@ async function logEvento(tipo, { lead_id = null, chave = null, payload = null } 
   }
 }
 
-module.exports = { db, config, leadByToken, logEvento };
+module.exports = { db, config, leadByToken, logEvento, CHAVE_ERRADA };

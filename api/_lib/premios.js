@@ -19,7 +19,7 @@ function premio(codigo, cfg) {
     clube: {
       titulo: 'Acesso ao Clube do Barbeiro',
       descricao: 'Você ganhou acesso ao Clube do Barbeiro da Barber School.',
-      acao: 'Acessar o Clube', url: cfg.premio_clube_url || 'https://clubdobarbeiro.com.br',
+      acao: 'Acessar o Clube', url: cfg.premio_clube_url || 'https://clube.barberschool.com.br',
     },
     vitalicio: {
       titulo: 'Cupom: Barber School vitalícia',
