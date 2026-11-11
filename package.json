@@ -1,0 +1,12 @@
+{
+  "name": "semana-do-barbeiro",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Captação, quiz, upsells e app de aulas da Semana do Barbeiro (Barber School)",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "local": "node local/servidor.js"
+  }
+}

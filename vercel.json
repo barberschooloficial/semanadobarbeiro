@@ -1,0 +1,110 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/disparos.js": {
+      "maxDuration": 60
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/webhook-asaas",
+      "destination": "/api/webhook?de=asaas"
+    },
+    {
+      "source": "/api/webhook-hotmart",
+      "destination": "/api/webhook?de=hotmart"
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "app.semanadobarbeiro.com.br"
+        }
+      ],
+      "destination": "/app/index.html"
+    },
+    {
+      "source": "/barberhub",
+      "has": [
+        {
+          "type": "host",
+          "value": "app.semanadobarbeiro.com.br"
+        }
+      ],
+      "destination": "/app/index.html"
+    },
+    {
+      "source": "/certificado",
+      "has": [
+        {
+          "type": "host",
+          "value": "app.semanadobarbeiro.com.br"
+        }
+      ],
+      "destination": "/app/certificado.html"
+    },
+    {
+      "source": "/admin",
+      "has": [
+        {
+          "type": "host",
+          "value": "app.semanadobarbeiro.com.br"
+        }
+      ],
+      "destination": "/app/admin.html"
+    },
+    {
+      "source": "/",
+      "destination": "/site/index.html"
+    },
+    {
+      "source": "/quiz",
+      "destination": "/site/quiz.html"
+    },
+    {
+      "source": "/certificado",
+      "destination": "/site/certificado.html"
+    },
+    {
+      "source": "/obrigado",
+      "destination": "/site/obrigado.html"
+    },
+    {
+      "source": "/privacidade",
+      "destination": "/site/privacidade.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=()"
+        }
+      ]
+    },
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300"
+        }
+      ]
+    }
+  ]
+}
