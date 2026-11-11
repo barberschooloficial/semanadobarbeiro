@@ -156,6 +156,19 @@
   .barrinha { height: 6px; border-radius: 999px; background: var(--papel); overflow: hidden; }
   .barrinha span { display: block; height: 100%; background: var(--bronze); }
   .disp .cancelar { justify-self: start; border: 0; background: none; color: var(--vermelho); font-weight: 700; font-size: .8rem; cursor: pointer; padding: 0; text-decoration: underline; }
+  /* Configurações */
+  .cfg-grid { display: grid; gap: 14px; }
+  @media (min-width: 900px) { .cfg-grid { grid-template-columns: 1fr 1fr; align-items: start; } }
+  .cfg-campo { padding: 12px 0; border-top: 1px solid var(--linha); }
+  .cfg-campo:first-of-type { border-top: 0; padding-top: 4px; }
+  .cfg-campo label { display: block; font-weight: 700; font-size: .9rem; margin-bottom: 6px; }
+  .cfg-linha { display: flex; gap: 8px; align-items: center; }
+  .cfg-linha input, .cfg-linha select { flex: 1; min-width: 0; width: auto; padding: 11px 13px; font-size: .95rem; }
+  .cfg-linha .btn { width: auto; flex: none; padding: 11px 16px; font-size: .74rem; }
+  .cfg-campo .ajuda { font-size: .78rem; color: var(--muted); margin: 6px 0 0; }
+  .cfg-campo .ok { font-size: .78rem; color: var(--ok); font-weight: 700; margin: 6px 0 0; }
+  .cfg-campo .erro { margin: 6px 0 0; }
+  .cfg-destaque { border: 1.5px solid var(--bronze); }
   /* Mensagens */
   .msg-grupo h3 { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
   .msg-grupo h3 small { font: 600 .8rem var(--f-texto); color: var(--muted); text-transform: none; letter-spacing: 0; }
@@ -232,6 +245,7 @@
       <button role="tab" data-aba="mensagens" aria-selected="false">Mensagens</button>
       <button role="tab" data-aba="disparos" aria-selected="false">Disparos</button>
       <button role="tab" data-aba="grupos" aria-selected="false">Grupos</button>
+      <button role="tab" data-aba="config" aria-selected="false">Configurações</button>
     </div>
 
     <section data-painel="resumo">
@@ -321,6 +335,14 @@
         <p class="small muted" style="margin-top:-4px">Abriu = abriu o e-mail ou clicou. Cadastrou = virou cadastro da Semana pelo link do convite. Os botões abrem o disparo já preenchido na aba Disparos, para você revisar e confirmar.</p>
         <div class="rolagem"><table id="tBlocos"></table></div>
       </div>
+    </section>
+
+    <section data-painel="config" hidden>
+      <div class="card" style="margin-bottom:14px">
+        <h3>Configurações</h3>
+        <p class="small muted" style="margin:0">O que você muda aqui vale em até 1 minuto, sem publicar nada. As chaves de API (Asaas, Hotmart, Resend, ManyChat, Supabase) não ficam aqui: continuam na Vercel, em Settings → Environment Variables.</p>
+      </div>
+      <div class="cfg-grid" id="cfgGrid"></div>
     </section>
 
     <section data-painel="mensagens" hidden>
@@ -505,6 +527,7 @@
     if (nome === 'leads') carregarLeads();
     if (nome === 'grupos') carregarGrupos();
     if (nome === 'mensagens') carregarMensagens();
+    if (nome === 'config') carregarConfig();
     window.scrollTo({ top: 0 });
   }
   document.querySelectorAll('[data-aba]').forEach(b => { b.onclick = () => abrirAba(b.dataset.aba); });
@@ -885,6 +908,41 @@
     });
   }
 
+
+
+  // ---------- configurações ----------
+  async function carregarConfig() {
+    const d = await fetchD('config');
+    $('cfgGrid').innerHTML = '';
+    d.grupos.forEach((g, gi) => {
+      const card = document.createElement('div'); card.className = 'card' + (gi === 0 ? ' cfg-destaque' : '');
+      card.innerHTML = `<h3>${esc(g.titulo)}</h3>`;
+      g.campos.forEach(c => {
+        const div = document.createElement('div'); div.className = 'cfg-campo';
+        const id = 'cfg_' + c.chave;
+        const mostra = c.tipo === 'fone' && c.valor ? fone(c.valor) : c.valor;
+        const campo = c.tipo === 'bool' ? `<select id="${id}"><option value="1"${c.valor !== '0' ? ' selected' : ''}>Ligado</option><option value="0"${c.valor === '0' ? ' selected' : ''}>Desligado</option></select>`
+          : c.tipo === 'sel' ? `<select id="${id}">${c.opcoes.map(([v, t]) => `<option value="${esc(v)}"${v === c.valor ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>`
+          : `<input id="${id}" type="${c.tipo === 'url' ? 'url' : c.tipo === 'fone' ? 'tel' : 'text'}" value="${esc(mostra)}" ${c.tipo === 'num' || c.tipo === 'int' || c.tipo === 'fone' ? 'inputmode="decimal"' : ''} placeholder="${c.tipo === 'fone' ? '(47) 99999-9999' : c.tipo === 'url' ? 'https://' : ''}">`;
+        div.innerHTML = `<label for="${id}">${esc(c.rotulo)}</label><div class="cfg-linha">${campo}<button class="btn sm" type="button">Salvar</button></div>${c.ajuda ? `<p class="ajuda">${esc(c.ajuda)}</p>` : ''}<p class="msg" hidden></p>`;
+        const msg = div.querySelector('.msg'), btn = div.querySelector('button'), el = div.querySelector('input,select');
+        if (c.tipo === 'fone') sdb.maskWhats(el);
+        const salvar = async () => {
+          btn.disabled = true; msg.hidden = true;
+          try {
+            const r = await fetchD('config_salvar', { chave: c.chave, valor: el.value });
+            if (c.tipo === 'fone') el.value = fone(r.valor);
+            msg.className = 'msg ok'; msg.textContent = 'Salvo ✓'; D.dados = null; G.dados = null;
+          } catch (e) { msg.className = 'msg erro'; msg.textContent = e.message; }
+          msg.hidden = false; btn.disabled = false;
+        };
+        btn.onclick = salvar;
+        el.addEventListener('keydown', (e) => { if (e.key === 'Enter') salvar(); });
+        card.appendChild(div);
+      });
+      $('cfgGrid').appendChild(card);
+    });
+  }
 
   // ---------- mensagens (biblioteca editável) ----------
   const M = { dados: null };
