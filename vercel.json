@@ -7,6 +7,10 @@
   },
   "rewrites": [
     {
+      "source": "/suporte",
+      "destination": "/api/t?zap=1"
+    },
+    {
       "source": "/api/webhook-asaas",
       "destination": "/api/webhook?de=asaas"
     },
