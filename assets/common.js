@@ -72,9 +72,22 @@
   }
   pixel();
 
-  function whatsLink(msg) {
-    return `https://wa.me/${C.WHATSAPP_NUMERO}?text=${encodeURIComponent(msg || C.WHATSAPP_PALAVRA || 'SEMANA')}`;
+  // Número do suporte: vem do painel (aba Configurações); o do config-publico.js é só reserva
+  let numeroSuporte = null;
+  async function suporte() {
+    if (numeroSuporte) return numeroSuporte;
+    try { const r = await fetch('/api/t?cfg=1'); const d = await r.json(); numeroSuporte = d.whatsapp || C.WHATSAPP_NUMERO; }
+    catch { numeroSuporte = C.WHATSAPP_NUMERO; }
+    return numeroSuporte;
   }
+  async function whatsLink(msg) {
+    return `https://wa.me/${await suporte()}?text=${encodeURIComponent(msg || C.WHATSAPP_PALAVRA || 'SEMANA')}`;
+  }
+  // Preenche todo link marcado com data-suporte="mensagem"
+  function ligarSuporte(raiz = document) {
+    raiz.querySelectorAll('[data-suporte]').forEach(async (a) => { a.href = await whatsLink(a.dataset.suporte); a.target = '_blank'; a.rel = 'noopener'; });
+  }
+  setTimeout(() => ligarSuporte(), 0);
 
   // ---------- Rastreio (api/t): sessão anônima + campanha de origem ----------
   const UTM = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content'];
@@ -107,5 +120,5 @@
     return new Date(dow >= 1 && dow <= 3 ? seg : seg + 7 * 864e5);
   }
 
-  window.sdb = { turma, track, api, store, qs, ir, caminho, DEMO, token, maskWhats, maskCpf, toast, esc, quando, brl, pixel, whatsLink, C };
+  window.sdb = { turma, track, api, store, qs, ir, caminho, DEMO, token, maskWhats, maskCpf, toast, esc, quando, brl, pixel, whatsLink, ligarSuporte, C };
 })();

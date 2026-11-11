@@ -407,6 +407,8 @@ footer .brand { color: #fff; }
 .carimbo span { font-size: .6rem; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; line-height: 1.25; }
 .hero-lado .lead { font-size: 1.14rem; color: var(--tinta-2); margin: 4px 0 16px; }
 .hero-lado .lead b { color: var(--tinta); background: linear-gradient(transparent 62%, var(--bronze-claro) 62%); }
+.para-quem { font-family: var(--f-display); font-size: clamp(1.45rem, 4.6vw, 1.9rem); line-height: 1.12; text-transform: uppercase; letter-spacing: .01em; margin: 0 0 14px; padding-left: 14px; border-left: 5px solid var(--vermelho); color: var(--tinta); text-wrap: balance; }
+.para-quem span { color: var(--bronze); }
 .placar { display: grid; grid-template-columns: repeat(3, 1fr); margin: 0 0 22px; border-block: 1.5px solid var(--tinta); }
 .placar div { padding: 12px 6px; text-align: center; }
 .placar div + div { border-left: 1px solid var(--linha); }
