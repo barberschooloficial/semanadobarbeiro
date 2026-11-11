@@ -340,7 +340,13 @@
     <section data-painel="config" hidden>
       <div class="card" style="margin-bottom:14px">
         <h3>Configurações</h3>
-        <p class="small muted" style="margin:0">O que você muda aqui vale em até 1 minuto, sem publicar nada. As chaves de API (Asaas, Hotmart, Resend, ManyChat, Supabase) não ficam aqui: continuam na Vercel, em Settings → Environment Variables.</p>
+        <p class="small muted" style="margin:0">O que você muda aqui vale em até 1 minuto, sem publicar nada.</p>
+      </div>
+      <div class="card" style="margin-bottom:14px">
+        <h3>Chaves de API</h3>
+        <p class="small muted" style="margin:0 0 10px">Por segurança as chaves ficam guardadas na Vercel, não no painel. Aqui você vê quais já estão gravadas. Para colocar ou trocar: abra a Vercel, cole a chave no nome indicado, salve e clique em <b>Redeploy</b>.</p>
+        <div id="cfgChaves"></div>
+        <a class="btn sm" style="margin-top:12px" href="https://vercel.com/barber-school1/semanadobarbeiro/settings/environment-variables" target="_blank" rel="noopener">Abrir chaves na Vercel</a>
       </div>
       <div class="cfg-grid" id="cfgGrid"></div>
     </section>
@@ -439,7 +445,7 @@
           <ol class="ext-passos" id="gPassos">
             <li>Baixe a extensão, descompacte e abra <code>chrome://extensions</code> no Chrome.</li>
             <li>Ligue o <b>Modo do desenvolvedor</b> e clique em <b>Carregar sem compactação</b> → escolha a pasta.</li>
-            <li>Clique no ícone da extensão e cole a chave <code>WA_EXT_KEY</code> (fica na Vercel).</li>
+            <li>Clique no ícone da extensão e cole a chave <code>WA_EXT_KEY</code>: <button class="btn sm" type="button" id="gChaveCopiar">Copiar chave</button> <button class="btn sm ghost" type="button" id="gChaveVer">Mostrar</button> <code id="gChaveTxt" hidden></code></li>
             <li>Abra <b>web.whatsapp.com</b> com o número de avisos. Os grupos, comunidades e canais aparecem aqui embaixo.</li>
           </ol>
         </div>
@@ -914,6 +920,7 @@
   async function carregarConfig() {
     const d = await fetchD('config');
     $('cfgGrid').innerHTML = '';
+    $('cfgChaves').innerHTML = (d.chaves || []).map(c => `<div style="display:flex;gap:10px;align-items:baseline;padding:7px 0;border-top:1px solid rgba(0,0,0,.07);flex-wrap:wrap"><span class="canal-st ${c.ok ? 'ok' : ''}" style="margin:0"><i></i>${c.ok ? 'gravada' : 'FALTA'}</span><b>${esc(c.rotulo)}</b><code>${esc(c.nome)}</code><span class="small muted">${esc(c.obs)}</span></div>`).join('');
     d.grupos.forEach((g, gi) => {
       const card = document.createElement('div'); card.className = 'card' + (gi === 0 ? ' cfg-destaque' : '');
       card.innerHTML = `<h3>${esc(g.titulo)}</h3>`;
@@ -1011,6 +1018,9 @@
       ['Chave WA_EXT_KEY', e.chave_ok ? 'ok' : '', e.chave_ok ? 'configurada' : 'falta na Vercel'],
     ].map(([n, c, t]) => `<span class="canal-st ${c}"><i></i>${esc(n)}: ${esc(t)}</span>`).join('');
     $('gPassos').hidden = !!(e.online && d.destinos.length);
+    $('gChaveCopiar').disabled = $('gChaveVer').disabled = !e.chave;
+    $('gChaveCopiar').onclick = async () => { try { await navigator.clipboard.writeText(e.chave); sdb.toast('Chave copiada. Cole na extensão.'); } catch { $('gChaveTxt').textContent = e.chave; $('gChaveTxt').hidden = false; sdb.toast('Não deu para copiar sozinho: selecione a chave e copie.'); } };
+    $('gChaveVer').onclick = () => { const t = $('gChaveTxt'); t.hidden = !t.hidden; t.textContent = t.hidden ? '' : e.chave; $('gChaveVer').textContent = t.hidden ? 'Mostrar' : 'Esconder'; };
     if (!d.auto && !$('gSemanaTxt').dataset.off) { $('gSemanaTxt').dataset.off = '1'; $('gSemanaTxt').insertAdjacentHTML('beforeend', ' <b>(Automático desligado em sdb_config.grupos_auto.)</b>'); }
     if (!$('gCopy').options.length) {
       $('gCopy').add(new Option('Mensagem livre', ''));
