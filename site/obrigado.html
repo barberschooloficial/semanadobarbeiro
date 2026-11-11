@@ -47,7 +47,7 @@
   document.getElementById('abreTxt').textContent = tu.getTime() + 11 * 3600e3 <= Date.now()
     ? `Sua turma começou na segunda, ${ini}: os módulos já liberados estão no app. Salve este link nos favoritos.`
     : `O primeiro módulo abre segunda, ${ini}, às 8h. Salve este link nos favoritos.`;
-  document.getElementById('zap').href = whatsLink(`${C.WHATSAPP_PALAVRA} - quero receber as aulas`);
+  whatsLink(`${C.WHATSAPP_PALAVRA} - quero receber as aulas`).then(u => { document.getElementById('zap').href = u; });
   document.getElementById('ig').href = `https://www.instagram.com/${C.INSTAGRAM}/`;
   if (qs('pago')) document.getElementById('pagoMsg').hidden = false;
 })();
