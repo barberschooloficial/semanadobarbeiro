@@ -438,6 +438,7 @@
     </div>`;
   }
 
+  let querCert = qs('comprar') === 'certificado';
   function renderCert(s) {
     const c = s.certificado, box = $('certBox');
     box.hidden = false;
@@ -453,6 +454,12 @@
     } else {
       box.innerHTML = `<span class="rotulo">Opcional</span><h3 style="margin-top:6px">Certificado de Participação</h3><p class="small muted">Comprove que você fez a Semana do Barbeiro. Certificado digital com seu nome, liberado ao concluir as 10 aulas.</p><div class="price" style="font-size:2.4rem">${brl(c.preco || 19.7)}</div><button class="btn green" id="btnCert" style="margin-top:10px">Quero meu certificado</button>`;
       $('btnCert').onclick = () => abrirCpf('certificado');
+    }
+    // Link direto de compra (?comprar=certificado, usado no catálogo do WhatsApp): depois do login já abre o pagamento
+    if (querCert) {
+      querCert = false;
+      if ($('btnCert')) abrirCpf('certificado');
+      else if (!box.hidden) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }
 
