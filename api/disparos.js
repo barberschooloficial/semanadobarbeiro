@@ -19,6 +19,46 @@ const { agora } = require('./_lib/util');
 const { segundaDa, em, ymd, rotulo, DIA } = require('./_lib/turma');
 const G = require('./_lib/grupos');
 
+// Configurações que o painel pode alterar (aba Configurações). Segredos não entram aqui.
+const CAMPOS_CFG = [
+  { titulo: 'Atendimento', campos: [
+    { chave: 'whatsapp_suporte', rotulo: 'WhatsApp do suporte', tipo: 'fone', ajuda: 'Número que abre nos botões de WhatsApp do site e do app. Se a Meta bloquear o número, troque aqui: vale em até 1 minuto.' },
+    { chave: 'grupo_whatsapp_url', rotulo: 'Link do grupo ou canal de avisos', tipo: 'url', opcional: true, ajuda: 'Aparece no app como "Entrar no grupo de avisos". Vazio esconde o botão.' },
+    { chave: 'live_url', rotulo: 'Onde acontece a live', tipo: 'url' },
+  ] },
+  { titulo: 'Curso e oferta', campos: [
+    { chave: 'hotmart_checkout_url', rotulo: 'Link do checkout da Hotmart (oferta)', tipo: 'url', ajuda: 'Link da oferta com o código (?off=...). Nome, e-mail e o cupom da roleta são acrescentados sozinhos.' },
+    { chave: 'curso_preco_de', rotulo: 'Preço cheio (R$)', tipo: 'num' },
+    { chave: 'curso_preco_por', rotulo: 'Preço da oferta (R$)', tipo: 'num' },
+    { chave: 'curso_parcelas', rotulo: 'Texto do parcelamento', tipo: 'texto' },
+    { chave: 'curso_site_url', rotulo: 'Site do curso', tipo: 'url', ajuda: 'Para onde vai quem já fez uma Semana e tenta se cadastrar de novo.' },
+  ] },
+  { titulo: 'Certificado e Barbeearia', campos: [
+    { chave: 'cert_preco', rotulo: 'Preço do certificado (R$)', tipo: 'num' },
+    { chave: 'barberhub_preco', rotulo: 'Preço da Barbeearia no app (R$)', tipo: 'num' },
+    { chave: 'barberhub_ciclo', rotulo: 'Cobrança da Barbeearia', tipo: 'sel', opcoes: [['MONTHLY', 'Assinatura mensal'], ['UNICO', 'Pagamento único']] },
+    { chave: 'barbeearia_convite_url', rotulo: 'Link do convite de 30 dias da Barbeearia', tipo: 'url' },
+  ] },
+  { titulo: 'Prêmios da roleta', campos: [
+    { chave: 'premio_barbeearia_url', rotulo: 'Dia 1: link dos 30 dias da Barbeearia', tipo: 'url' },
+    { chave: 'premio_clube_url', rotulo: 'Dia 3: link do Clube do Barbeiro', tipo: 'url' },
+    { chave: 'premio_vitalicio_cupom', rotulo: 'Dia 4: cupom do curso vitalício', tipo: 'texto', ajuda: 'O cupom precisa existir na Hotmart.' },
+  ] },
+  { titulo: 'Turma e lives', campos: [
+    { chave: 'aula_hora', rotulo: 'Hora em que o módulo abre', tipo: 'hora' },
+    { chave: 'live_dias', rotulo: 'Dias das lives', tipo: 'dias', ajuda: '1 = segunda ... 7 = domingo. Ex.: 1,5' },
+    { chave: 'live_inicio', rotulo: 'Início da live', tipo: 'hora' },
+    { chave: 'live_fim', rotulo: 'Fim da live', tipo: 'hora' },
+  ] },
+  { titulo: 'Automação', campos: [
+    { chave: 'disparos_auto', rotulo: 'Programar sozinho os e-mails e WhatsApps de cada turma', tipo: 'bool' },
+    { chave: 'grupos_auto', rotulo: 'Programar sozinho os avisos nos grupos', tipo: 'bool' },
+    { chave: 'wa_limite_dia', rotulo: 'Máximo de avisos por grupo por dia', tipo: 'int' },
+    { chave: 'wa_intervalo_min', rotulo: 'Extensão: espera mínima entre grupos (segundos)', tipo: 'int' },
+    { chave: 'wa_intervalo_max', rotulo: 'Extensão: espera máxima entre grupos (segundos)', tipo: 'int' },
+  ] },
+];
+
 const TOKEN = /^[a-f0-9]{20,64}$/;
 const espera = (ms) => new Promise(r => setTimeout(r, ms));
 const varsDe = (l) => ({ nome: String(l.nome || '').split(' ')[0], app_link: `${APP_URL()}/?t=${l.token}` });
@@ -235,6 +275,29 @@ module.exports = handler(['GET', 'POST'], async (req, res) => {
       email_ok: !!process.env.RESEND_API_KEY, whatsapp_ok: !!process.env.MANYCHAT_API_KEY, simulado: process.env.SDB_LOCAL === '1',
       agora: new Date(agora()).toISOString(), ultimo_processamento: cfg.disparos_ultimo || null, turma_alvo: turmaAlvo(), turmas: turmasRecentes(), auto: cfg.disparos_auto !== '0',
     });
+  }
+
+  // ---------- Configurações (sdb_config editável pelo painel; chaves de API ficam na Vercel) ----------
+  if (acao === 'config') {
+    return send(res, 200, { grupos: CAMPOS_CFG.map(g => ({ titulo: g.titulo, campos: g.campos.map(c => ({ ...c, valor: cfg[c.chave] ?? '' })) })) });
+  }
+  if (acao === 'config_salvar') {
+    const campo = CAMPOS_CFG.flatMap(g => g.campos).find(c => c.chave === b.chave);
+    if (!campo) throw fail(400, 'Configuração desconhecida');
+    let v = String(b.valor ?? '').trim().slice(0, 500);
+    const erro = (m) => { throw fail(400, `${campo.rotulo}: ${m}`); };
+    if (campo.tipo === 'fone') { v = normalizaWhats(v) || erro('use DDD + número, ex.: (47) 99999-9999'); }
+    else if (campo.tipo === 'url') { if (v && !/^https:\/\/[^\s]+$/i.test(v)) erro('o link precisa começar com https://'); if (!v && !campo.opcional) erro('não pode ficar vazio'); }
+    else if (campo.tipo === 'num') { v = v.replace(',', '.'); if (!/^\d+(\.\d{1,2})?$/.test(v)) erro('use só número, ex.: 147 ou 19.70'); }
+    else if (campo.tipo === 'int') { if (!/^\d{1,4}$/.test(v)) erro('use um número inteiro'); }
+    else if (campo.tipo === 'hora') { if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(v)) erro('use HH:MM, ex.: 08:00'); }
+    else if (campo.tipo === 'dias') { if (!/^[1-7](,[1-7])*$/.test(v)) erro('use os dias separados por vírgula, ex.: 1,5 (1 = segunda)'); }
+    else if (campo.tipo === 'bool') { v = v === '1' || v === 'true' ? '1' : '0'; }
+    else if (campo.tipo === 'sel') { if (!campo.opcoes.some(o => o[0] === v)) erro('opção inválida'); }
+    else if (!v && !campo.opcional) erro('não pode ficar vazio');
+    await G.cfgSet(campo.chave, v);
+    await logEvento('config_alterada', { payload: { chave: campo.chave } });
+    return send(res, 200, { ok: true, valor: v });
   }
 
   // ---------- Mensagens (biblioteca editável) ----------

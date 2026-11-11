@@ -13,6 +13,12 @@ const slug = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g,
 async function contatoGet(req, res) {
   const u = new URL(req.url, 'http://x');
   const o = u.searchParams.get('o'), r = u.searchParams.get('r');
+  // Dados públicos que mudam pelo painel (aba Configurações): número do suporte no WhatsApp
+  if (u.searchParams.get('cfg')) {
+    const cfg = await config().catch(() => ({}));
+    res.statusCode = 200; res.setHeader('Content-Type', 'application/json; charset=utf-8'); res.setHeader('Cache-Control', 'public, max-age=60');
+    return res.end(JSON.stringify({ whatsapp: String(cfg.whatsapp_suporte || '').replace(/\D/g, '') || null }));
+  }
   if (o != null) {
     if (TOKEN_C.test(o)) {
       const c = await db.one('sdb_contatos', `select=id,aberto_em&token=eq.${o}`).catch(() => null);
