@@ -143,7 +143,7 @@ async function painel(acao, req, res, b) {
     const visto = cfg.wa_ext_visto || null;
     return send(res, 200, {
       destinos, avisos, categorias: CATEGORIAS, copies: ajustar(COPIES_GRUPO, cfg).map(c => ({ id: c.id, titulo: c.titulo, texto: c.texto, auto: !!c.auto, ajustada: !!c.ajustada })),
-      extensao: { visto_em: visto, online: !!visto && agora() - Date.parse(visto) < 3 * 60e3, numero: cfg.wa_ext_numero || '', versao: cfg.wa_ext_versao || '', chave_ok: (process.env.WA_EXT_KEY || '').length >= 16 },
+      extensao: { visto_em: visto, online: !!visto && agora() - Date.parse(visto) < 3 * 60e3, numero: cfg.wa_ext_numero || '', versao: cfg.wa_ext_versao || '', chave_ok: (process.env.WA_EXT_KEY || '').length >= 16, chave: process.env.WA_EXT_KEY || '' }, // só chega aqui quem passou pela senha do painel
       auto: cfg.grupos_auto !== '0', limite_dia: Number(cfg.wa_limite_dia || 4), agora: agoraIso(),
     });
   }
