@@ -19,6 +19,15 @@ async function contatoGet(req, res) {
     res.statusCode = 200; res.setHeader('Content-Type', 'application/json; charset=utf-8'); res.setHeader('Cache-Control', 'public, max-age=60');
     return res.end(JSON.stringify({ whatsapp: String(cfg.whatsapp_suporte || '').replace(/\D/g, '') || null }));
   }
+  // /suporte — redireciona para o WhatsApp do suporte cadastrado no painel (troca o número sem mexer nas automações)
+  if (u.searchParams.get('zap')) {
+    const cfg = await config().catch(() => ({}));
+    const n = String(cfg.whatsapp_suporte || '').replace(/\D/g, '');
+    const msg = encodeURIComponent('Oi! Preciso de ajuda com a Semana do Barbeiro.');
+    res.statusCode = 302; res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Location', n ? `https://wa.me/${n}?text=${msg}` : SITE_URL() + '/');
+    return res.end();
+  }
   if (o != null) {
     if (TOKEN_C.test(o)) {
       const c = await db.one('sdb_contatos', `select=id,aberto_em&token=eq.${o}`).catch(() => null);
