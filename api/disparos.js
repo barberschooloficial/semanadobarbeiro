@@ -1,7 +1,8 @@
 // /api/disparos — disparos de e-mail (Resend) e WhatsApp (ManyChat) com fila e agendamento.
 // Grupos do WhatsApp:    ?acao=wa_* (ver _lib/grupos.js; a extensão usa x-ext-key)
 // Painel (x-admin-key):  GET ?acao=lista · POST ?acao=contar|criar|semana|cancelar|teste|processar
-// Agendador (x-cron-key): POST ?acao=processar  (pg_cron do Supabase a cada 5 min, ver LEIA-ME)
+// Agendador:            GET/POST ?acao=tick (pg_cron do Supabase a cada 5 min, sem senha, com trava de 4 min)
+//                        POST ?acao=processar com x-cron-key também funciona
 // Público:               GET/POST ?acao=descadastro&t=<token>  (link "não quero mais receber")
 const { db, config, logEvento } = require('./_lib/db');
 const { readJson, send, handler, fail, SITE_URL, APP_URL } = require('./_lib/http');
@@ -194,6 +195,14 @@ module.exports = handler(['GET', 'POST'], async (req, res) => {
     res.statusCode = ok ? 200 : 404;
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.end(paginaSaida(ok));
+  }
+
+  // Batida do agendador (pg_cron do Supabase), sem senha: só processa o que já está programado e vencido,
+  // e no máximo uma vez a cada 4 minutos, então chamar de fora não adianta nem envia nada antes da hora.
+  if (acao === 'tick') {
+    const c0 = await config();
+    if (agora() - (Date.parse(c0.disparos_ultimo || '') || 0) < 4 * 60e3) return send(res, 200, { ok: true, pulado: true });
+    return send(res, 200, { ok: true, processados: (await processar()).length });
   }
 
   if (acao === 'processar') {
