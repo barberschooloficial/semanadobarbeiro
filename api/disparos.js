@@ -279,7 +279,17 @@ module.exports = handler(['GET', 'POST'], async (req, res) => {
 
   // ---------- Configurações (sdb_config editável pelo painel; chaves de API ficam na Vercel) ----------
   if (acao === 'config') {
-    return send(res, 200, { grupos: CAMPOS_CFG.map(g => ({ titulo: g.titulo, campos: g.campos.map(c => ({ ...c, valor: cfg[c.chave] ?? '' })) })) });
+    // Situação das chaves de API (só "tem / não tem": o valor nunca sai do servidor)
+    const E = process.env, tem = (k) => !!(E[k] && String(E[k]).trim());
+    const chaves = [
+      { nome: 'ASAAS_API_KEY', rotulo: 'Asaas (certificado e Barbeearia)', ok: tem('ASAAS_API_KEY'), obs: tem('ASAAS_API_KEY') ? (E.ASAAS_ENV === 'producao' ? 'produção' : 'modo teste (sandbox): falta ASAAS_ENV=producao') : 'sem ela o certificado não gera cobrança' },
+      { nome: 'ASAAS_WEBHOOK_TOKEN', rotulo: 'Asaas: token do webhook', ok: tem('ASAAS_WEBHOOK_TOKEN'), obs: 'confirma o pagamento sozinho' },
+      { nome: 'HOTMART_HOTTOK', rotulo: 'Hotmart (venda do curso)', ok: tem('HOTMART_HOTTOK'), obs: 'libera o aluno quando a Hotmart avisa a compra' },
+      { nome: 'RESEND_API_KEY', rotulo: 'Resend (e-mails)', ok: tem('RESEND_API_KEY'), obs: 'envio dos e-mails das aulas' },
+      { nome: 'MANYCHAT_API_KEY', rotulo: 'ManyChat (WhatsApp 1 a 1)', ok: tem('MANYCHAT_API_KEY'), obs: 'opcional enquanto não houver canal de WhatsApp no ManyChat' },
+      { nome: 'SUPABASE_SERVICE_ROLE_KEY', rotulo: 'Supabase (banco)', ok: tem('SUPABASE_SERVICE_ROLE_KEY'), obs: 'banco de dados' },
+    ];
+    return send(res, 200, { chaves, grupos: CAMPOS_CFG.map(g => ({ titulo: g.titulo, campos: g.campos.map(c => ({ ...c, valor: cfg[c.chave] ?? '' })) })) });
   }
   if (acao === 'config_salvar') {
     const campo = CAMPOS_CFG.flatMap(g => g.campos).find(c => c.chave === b.chave);
