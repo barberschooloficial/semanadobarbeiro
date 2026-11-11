@@ -8,7 +8,7 @@ const BTN = '[Assistir agora]({{app_link}})';
 
 const MODULOS = [
   ['Módulo 1 liberado: comece pela bancada', 'O que você precisa ter na bancada para começar e qual pente usar em cada etapa do corte.'],
-  ['Módulo 2: Mid Fade com Pompadour', 'O degradê médio passo a passo e o Clipper Over Comb para um acabamento de respeito.'],
+  ['Módulo 2: Mid Fade com Pompadour', 'O degradê médio passo a passo e as dicas do professor Cris Aita sobre tesouras: como escolher, usar e cuidar.'],
   ['O corte que todo mundo erra (redemoinho)', 'A dica que resolve o redemoinho sem estragar o corte e a risca na navalha com segurança, no Corte Razor Part.'],
   ['Barba passo a passo + Flat Top', 'Preparação, toalha quente, desenho e acabamento da barba. E o Flat Top com High Fade.'],
   ['Último módulo (e uma surpresa)', 'High Fade em "V" atrás e a progressiva masculina, o serviço que aumenta o ticket da cadeira.'],

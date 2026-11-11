@@ -12,7 +12,7 @@ function seed() {
     [1, 1, 'Equipamentos básicos do barbeiro', 'O que você precisa ter na bancada para começar.', 15, '2026-11-02T08:00:00-03:00'],
     [2, 1, 'Tudo sobre pentes', 'Qual pente usar em cada etapa do corte.', 12, '2026-11-02T08:00:00-03:00'],
     [3, 2, 'Corte Mid Fade com Pompadour', 'Passo a passo completo do degradê médio.', 25, '2026-11-03T08:00:00-03:00'],
-    [4, 2, 'Clipper Over Comb', 'A técnica do pente com máquina para um acabamento exclusivo.', 15, '2026-11-03T08:00:00-03:00'],
+    [4, 2, 'Dicas sobre tesouras', 'Como escolher, usar e cuidar das tesouras, na live do professor Cris Aita.', null, '2026-11-03T08:00:00-03:00'],
     [5, 3, 'Como cortar cabelo com muito redemoinho', 'A dica que resolve o redemoinho sem estragar o corte.', 12, '2026-11-04T08:00:00-03:00'],
     [6, 3, 'Corte Razor Part', 'Risca na navalha com segurança.', 15, '2026-11-04T08:00:00-03:00'],
     [7, 4, 'Barba passo a passo', 'Preparação, toalha quente, desenho e acabamento.', 20, '2026-11-05T08:00:00-03:00'],
@@ -34,7 +34,7 @@ function seed() {
     premio_barbeearia_url: 'https://barbeearia.com.br', premio_clube_url: 'https://clubdobarbeiro.com.br', premio_vitalicio_cupom: 'VITALICIO',
     mc_flow_modulo_1: '', mc_flow_modulo_2: '', mc_flow_modulo_3: '', mc_flow_modulo_4: '', mc_flow_modulo_5: '', mc_flow_lembrete: '', mc_flow_oferta: '', mc_flow_ultima: '', whatsapp_custo_usd: '0.0718',
     aula_hora: '08:00', live_dias: '1,5', live_inicio: '19:00', live_fim: '20:00', disparos_auto: '1', curso_site_url: 'https://www.barberschool.com.br', mc_flow_live: '', mc_flow_convite: '', mc_flow_barbeearia: '', barbeearia_convite_url: 'https://barbeearia.com.br/cadastro?codigo=ALUNOBS30',
-    grupo_whatsapp_url: '', live_url: 'https://www.instagram.com/barberschooloficial/', live_horario: '20h', grupos_auto: '1', wa_limite_dia: '4', wa_intervalo_min: '20', wa_intervalo_max: '90',
+    grupo_whatsapp_url: '', live_url: 'https://www.instagram.com/barberschooloficial/', live_horario: '20h', grupos_auto: '1', whatsapp_suporte: '', wa_limite_dia: '4', wa_intervalo_min: '20', wa_intervalo_max: '90',
   };
   return {
     sdb_leads: [], sdb_progresso: [], sdb_eventos: [], sdb_roleta: [], sdb_disparos: [], sdb_disparo_envios: [], sdb_trilha: [], sdb_contatos: [], sdb_contato_envios: [], sdb_wa_destinos: [], sdb_wa_avisos: [], sdb_wa_aviso_envios: [],
