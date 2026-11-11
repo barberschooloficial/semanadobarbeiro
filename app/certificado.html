@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Certificado — Semana do Barbeiro</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;600;700;800&family=Kaushan+Script&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css">
+<style>
+  @page { size: A4 landscape; margin: 0; }
+  .cert { background: #fbf6ec; color: #1b160e; width: 100%; max-width: 1050px; aspect-ratio: 297/210; margin: 20px auto; position: relative; padding: 4.5% 6%; border: 14px solid #1b160e; outline: 3px solid #b98b30; outline-offset: -26px; display: flex; flex-direction: column; justify-content: space-between; text-align: center; }
+  .cert h1 { font-size: clamp(2rem, 6vw, 4.2rem); color: #1b160e; margin: 0; }
+  .cert .sub { letter-spacing: .3em; text-transform: uppercase; font-size: clamp(.6rem, 1.4vw, .9rem); color: #7a6136; }
+  .cert .nome { font-family: 'Great Vibes', cursive; font-size: clamp(2.2rem, 7vw, 4.6rem); color: #8a6420; margin: .1em 0; line-height: 1.1; }
+  .cert p { font-size: clamp(.7rem, 1.6vw, 1rem); margin: 0 auto; max-width: 80%; }
+  .cert .aulas { font-size: clamp(.55rem, 1.2vw, .78rem); color: #4b3f2c; max-width: 90%; margin: 0 auto; }
+  .cert .ass { display: flex; justify-content: space-around; align-items: end; font-size: clamp(.6rem, 1.3vw, .85rem); }
+  .cert .ass div { border-top: 1px solid #1b160e; padding-top: 6px; min-width: 30%; }
+  .cert .pole { position: absolute; left: 0; right: 0; top: 0; }
+  @media print { body { background: #fff; } .cert { margin: 0; max-width: none; width: 297mm; height: 210mm; border-width: 10mm; } }
+</style>
+</head>
+<body>
+<div class="wrap no-print" style="display:flex;gap:10px;justify-content:space-between;align-items:center;padding:14px 16px">
+  <a class="brand" href="/"><img src="/assets/img/logo.png" alt="Barber School" width="46" height="46"><span><b>Semana do Barbeiro</b><small>Barber School</small></span></a>
+  <button class="btn sm" id="btnPrint" hidden onclick="window.print()">Salvar em PDF / imprimir</button>
+</div>
+<div id="aviso" class="wrap narrow card no-print" hidden></div>
+<div class="cert" id="cert" hidden>
+  <div class="pole"></div>
+  <div>
+    <div class="sub">Barber School · Semana do Barbeiro <span id="ano"></span></div>
+    <h1>Certificado de Participação</h1>
+  </div>
+  <div>
+    <p>Certificamos que</p>
+    <div class="nome" id="nome"></div>
+    <p>participou da <b>Semana do Barbeiro</b>, realizada <span id="periodo"></span>, concluindo as <b id="qtd">10</b> aulas abaixo, com carga horária total de <b id="horas"></b>.</p>
+  </div>
+  <div class="aulas" id="aulas"></div>
+  <div class="ass">
+    <div>Cris Aita<br><span style="color:#7a6136">Fundador da Barber School</span></div>
+    <div id="data"></div>
+  </div>
+</div>
+<script src="/assets/config-publico.js"></script>
+<script src="/assets/common.js"></script>
+<script>
+(async () => {
+  const { api, token, esc } = sdb;
+  const t = token();
+  const aviso = (msg) => { const a = document.getElementById('aviso'); a.hidden = false; a.innerHTML = msg; };
+  if (!t) return aviso('Abra esta página pelo seu app de aulas. <a href="/">Ir para o app</a>');
+  try {
+    const s = await api('me', { token: t });
+    if (!s.certificado.liberado) return aviso(`O certificado libera quando o pagamento estiver confirmado e você concluir as 10 aulas (${s.progresso.assistidas}/${s.progresso.total}). <a href="/">Voltar às aulas</a>`);
+    document.getElementById('nome').textContent = s.aluno.nome;
+    // Período da turma do aluno (segunda a sexta)
+    const ini = new Date(`${s.turma.inicio}T12:00:00-03:00`), fim = new Date(ini.getTime() + 4 * 864e5);
+    const MES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+    const d2 = (d) => String(d.getUTCDate()).padStart(2, '0');
+    document.getElementById('ano').textContent = fim.getUTCFullYear();
+    document.getElementById('periodo').textContent = ini.getUTCMonth() === fim.getUTCMonth()
+      ? `de ${d2(ini)} a ${d2(fim)} de ${MES[fim.getUTCMonth()]} de ${fim.getUTCFullYear()}`
+      : `de ${d2(ini)} de ${MES[ini.getUTCMonth()]} a ${d2(fim)} de ${MES[fim.getUTCMonth()]} de ${fim.getUTCFullYear()}`;
+    document.getElementById('qtd').textContent = s.aulas.length;
+    const min = s.aulas.reduce((t, a) => t + (a.duracao_min || 0), 0);
+    document.getElementById('horas').textContent = `${Math.max(1, Math.round(min / 60))} horas`;
+    document.getElementById('aulas').innerHTML = s.aulas.map(a => `${a.ordem}. ${esc(a.titulo)}`).join(' · ');
+    document.getElementById('data').innerHTML = `${new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}<br><span style="color:#7a6136">Data de emissão</span>`;
+    document.getElementById('cert').hidden = false;
+    document.getElementById('btnPrint').hidden = !!sdb.DEMO;
+  } catch (e) { aviso(esc(e.message) + ' <a href="/">Voltar</a>'); }
+})();
+</script>
+</body>
+</html>

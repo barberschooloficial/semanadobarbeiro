@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Minhas aulas — Semana do Barbeiro</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0f0d0b">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;600;700;800&family=Kaushan+Script&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<div class="pole"></div>
+
+<!-- Login -->
+<div class="wrap narrow" id="login" hidden style="padding:28px 16px 48px">
+  <a class="brand" href="/"><img src="/assets/img/logo.png" alt="Barber School" width="46" height="46"><span><b>Semana do Barbeiro</b><small>Barber School</small></span></a>
+  <h2 style="margin-top:22px">Entrar nas minhas aulas</h2>
+  <p class="muted small">Use o WhatsApp e o e-mail do seu cadastro. O jeito mais fácil é abrir o link que chegou no seu WhatsApp.</p>
+  <form id="fLogin" class="card" novalidate>
+    <div class="field"><label for="lw">WhatsApp com DDD</label><input id="lw" type="tel" inputmode="numeric" placeholder="(47) 99999-9999"></div>
+    <div class="field"><label for="le">E-mail</label><input id="le" type="email"></div>
+    <button class="btn" type="submit">Entrar</button>
+    <p class="erro" id="lErro"></p>
+  </form>
+  <p class="small muted center" style="margin-top:14px">Ainda não se cadastrou? <a id="lnkCadastro" href="#">Faça seu cadastro grátis</a></p>
+</div>
+
+<!-- App -->
+<div class="wrap" id="main" hidden style="padding-bottom:56px">
+  <div class="app-head">
+    <a class="brand" href="/"><img src="/assets/img/logo.png" alt="Barber School" width="46" height="46"><span><b>Semana do Barbeiro</b><small>Barber School</small></span></a>
+    <div class="ola" id="ola"></div>
+  </div>
+
+  <div class="painel-topo" id="painel">
+    <div class="foto-fundo" style="background-image:url('/assets/img/cris-retrato.jpg');background-position:70% 30%"></div>
+    <button class="mini-btn" id="btnMini" type="button" aria-expanded="true" aria-controls="painel">Minimizar</button>
+    <div class="painel-linha">
+      <div class="painel-txt">
+        <span class="rotulo" id="proxLabel">Próximo módulo</span>
+        <h2 id="proxTitulo">—</h2>
+        <div class="small" id="proxInfo" style="color:#c9b994;margin-top:6px"></div>
+      </div>
+      <div class="countdown" id="cd"></div>
+    </div>
+    <div class="bar-info"><span>Seu progresso</span><span id="progTxt">0 de 10 aulas</span></div>
+    <div class="progress"><i id="progBar"></i></div>
+  </div>
+
+  <div id="ofertaBox"></div>
+  <div id="barberhubBox"></div>
+
+  <div class="layout-app">
+    <div>
+      <div class="abas" role="tablist" id="abas"></div>
+      <div id="modCab"></div>
+      <div id="player"></div>
+      <div id="modAulas"></div>
+      <div id="saibaMais"></div>
+    </div>
+    <aside class="lateral">
+      <div class="card premios" id="premiosBox" hidden></div>
+      <div class="card" id="certBox"></div>
+      <div class="card">
+        <span class="rotulo">Ao vivo</span>
+        <h3 style="margin-top:6px">Lives com o professor Cris Aita</h3>
+        <p class="small muted" style="margin-bottom:6px"><b id="liveHora">Segunda e sexta, das 19h às 20h</b>, no Instagram, para tirar as dúvidas das aulas.</p>
+        <p class="small" id="liveProx" style="margin:0 0 12px"></p>
+        <a class="btn ghost" id="liveLink" target="_blank" rel="noopener">Ir para a live</a>
+      </div>
+      <div class="card" id="grupoBox" hidden>
+        <h3>Avisos no WhatsApp</h3>
+        <a class="btn green" id="grupoLink" data-track="grupo_clique" target="_blank" rel="noopener">Entrar no grupo de avisos</a>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- CPF (certificado / Barbeearia) -->
+<div class="modal" id="mCpf">
+  <div class="box sm">
+    <div style="display:flex;justify-content:space-between;align-items:start"><h3 id="cpfTitulo">Pagamento</h3><button class="x" id="cpfFechar" aria-label="Fechar">×</button></div>
+    <p class="small muted" id="cpfTexto"></p>
+    <div class="field"><label for="cpf">CPF</label><input id="cpf" type="text" inputmode="numeric" placeholder="000.000.000-00"></div>
+    <button class="btn green" id="cpfBtn">Ir para o pagamento</button>
+    <p class="erro" id="cpfErro"></p>
+  </div>
+</div>
+
+<script src="/assets/config-publico.js"></script>
+<script src="/assets/common.js"></script>
+<script src="/assets/app.js"></script>
+</body>
+</html>
