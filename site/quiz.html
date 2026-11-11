@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Confirme sua vaga — Semana do Barbeiro</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;600;700;800&family=Kaushan+Script&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<div class="pole"></div>
+<div class="wrap narrow">
+  <div class="top"><a class="brand" href="/"><img src="/assets/img/logo.png" alt="Barber School" width="46" height="46"><span><b>Semana do Barbeiro</b><small>Barber School</small></span></a><span class="small muted" id="passo">1 de 5</span></div>
+  <div class="progress"><i id="bar"></i></div>
+  <div style="padding:26px 0 40px">
+    <span class="tag">Falta só confirmar sua vaga</span>
+    <h2 id="pergunta">...</h2>
+    <p class="muted small" id="ajuda"></p>
+    <div class="opts" id="opts"></div>
+    <p class="erro" id="erro"></p>
+  </div>
+</div>
+<script src="/assets/config-publico.js"></script>
+<script src="/assets/common.js"></script>
+<script>
+(() => {
+  const { api, token } = sdb;
+  const t = token();
+  if (!t) { sdb.ir('/'); return; }
+
+  const Q = [
+    { k: 'experiencia', p: 'Você já cortou cabelo?', a: 'Assim o professor Cris Aita sabe por onde começar com você.', o: [
+      ['nunca_cortei', 'Nunca peguei numa máquina'], ['corto_amigos', 'Já corto amigos e família'],
+      ['trabalho_barbearia', 'Trabalho em barbearia'], ['tenho_barbearia', 'Tenho minha barbearia'] ] },
+    { k: 'objetivo', p: 'O que você quer com a barbearia?', a: '', o: [
+      ['nova_profissao', 'Uma nova profissão'], ['renda_extra', 'Uma renda extra'],
+      ['melhorar_tecnica', 'Melhorar minha técnica'], ['abrir_barbearia', 'Abrir minha barbearia'] ] },
+    { k: 'material', p: 'Você já tem material de corte?', a: 'Máquina, tesoura, pentes...', o: [
+      ['nao_tenho', 'Ainda não tenho'], ['tenho_basico', 'Tenho o básico'], ['tenho_completo', 'Tenho tudo'] ] },
+    { k: 'horario', p: 'Quando você vai assistir às aulas?', a: 'Um módulo novo sai todo dia às 8h, e as aulas ficam no ar até domingo.', o: [
+      ['manha', 'De manhã'], ['noite', 'À noite'], ['qualquer', 'Quando der, durante o dia'] ] },
+    { k: 'compromisso', p: 'Você se compromete a assistir às 10 aulas até sexta?', a: 'Quem assiste tudo aproveita a semana de verdade.', o: [
+      ['sim', 'Sim, vou assistir todas'], ['talvez', 'Vou tentar'] ] },
+  ];
+  const resp = {}; let i = 0;
+  const el = (id) => document.getElementById(id);
+
+  function render() {
+    const q = Q[i];
+    el('passo').textContent = `${i + 1} de ${Q.length}`;
+    el('bar').style.width = `${(i / Q.length) * 100}%`;
+    el('pergunta').textContent = q.p; el('ajuda').textContent = q.a;
+    el('opts').innerHTML = '';
+    q.o.forEach(([v, txt]) => {
+      const b = document.createElement('button'); b.className = 'opt'; b.type = 'button'; b.textContent = txt;
+      b.onclick = () => { b.classList.add('on'); resp[q.k] = v; setTimeout(next, 180); };
+      el('opts').appendChild(b);
+    });
+  }
+  async function next() {
+    if (i < Q.length - 1) { i++; render(); return; }
+    el('bar').style.width = '100%';
+    el('opts').innerHTML = '<p class="muted">Confirmando sua vaga...</p>';
+    try {
+      await api('quiz', { method: 'POST', body: { token: t, respostas: resp } });
+      sdb.ir('/certificado?t=' + t);
+    } catch (e) {
+      el('erro').textContent = e.message;
+      el('opts').innerHTML = ''; const b = document.createElement('button'); b.className = 'btn'; b.textContent = 'Tentar de novo'; b.onclick = next; el('opts').appendChild(b);
+    }
+  }
+  render();
+})();
+</script>
+</body>
+</html>

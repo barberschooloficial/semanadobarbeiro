@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tudo certo! — Semana do Barbeiro</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;600;700;800&family=Kaushan+Script&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<div class="pole"></div>
+<div class="wrap narrow" style="padding-bottom:48px">
+  <div class="top"><a class="brand" href="/"><img src="/assets/img/logo.png" alt="Barber School" width="46" height="46"><span><b>Semana do Barbeiro</b><small>Barber School</small></span></a></div>
+  <span class="tag">✓ Inscrição concluída</span>
+  <h1>Tudo certo! Agora faça estes 3 passos</h1>
+  <p class="muted" id="pagoMsg" hidden>Recebemos seu pedido do certificado. Assim que o pagamento for confirmado ele aparece no seu app.</p>
+
+  <div class="steps" style="margin:22px 0">
+    <div class="step card">
+      <b>Chame a gente no WhatsApp</b>
+      <p class="small muted">É por lá que você recebe o aviso de cada módulo novo, todo dia às 8h. Mande a mensagem que já vem pronta.</p>
+      <a class="btn green" id="zap" data-track="whatsapp_clique" target="_blank" rel="noopener">Ativar meus avisos no WhatsApp</a>
+    </div>
+    <div class="step card">
+      <b>Guarde o seu acesso às aulas</b>
+      <p class="small muted" id="abreTxt">O primeiro módulo abre segunda às 8h. Salve este link nos favoritos.</p>
+      <a class="btn" id="app" data-track="app_aberto" data-track-detalhe="obrigado" target="_blank" rel="noopener">Abrir meu app de aulas</a>
+    </div>
+    <div class="step card">
+      <b>Siga o Instagram para as lives</b>
+      <p class="small muted">Segunda e sexta, das 19h às 20h, tem live com o professor Cris Aita para tirar dúvidas das aulas.</p>
+      <a class="btn ghost" id="ig" data-track="instagram_clique" target="_blank" rel="noopener">Seguir @barberschooloficial</a>
+    </div>
+  </div>
+</div>
+<script src="/assets/config-publico.js"></script>
+<script src="/assets/common.js"></script>
+<script>
+(() => {
+  const { token, store, qs, whatsLink, C } = sdb;
+  const t = token();
+  const appLink = t ? `${C.APP_URL}/?t=${t}` : C.APP_URL;
+  document.getElementById('app').href = appLink;
+  const tu = sdb.turma(), d2 = (n) => String(n).padStart(2, '0');
+  const ini = `${d2(tu.getUTCDate())}/${d2(tu.getUTCMonth() + 1)}`;
+  document.getElementById('abreTxt').textContent = tu.getTime() + 11 * 3600e3 <= Date.now()
+    ? `Sua turma começou na segunda, ${ini}: os módulos já liberados estão no app. Salve este link nos favoritos.`
+    : `O primeiro módulo abre segunda, ${ini}, às 8h. Salve este link nos favoritos.`;
+  document.getElementById('zap').href = whatsLink(`${C.WHATSAPP_PALAVRA} - quero receber as aulas`);
+  document.getElementById('ig').href = `https://www.instagram.com/${C.INSTAGRAM}/`;
+  if (qs('pago')) document.getElementById('pagoMsg').hidden = false;
+})();
+</script>
+</body>
+</html>

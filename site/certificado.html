@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Certificado — Semana do Barbeiro</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;600;700;800&family=Kaushan+Script&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<div class="pole"></div>
+<div class="wrap narrow" style="padding-bottom:48px">
+  <div class="top"><a class="brand" href="/"><img src="/assets/img/logo.png" alt="Barber School" width="46" height="46"><span><b>Semana do Barbeiro</b><small>Barber School</small></span></a></div>
+  <div class="progress"><i style="width:100%"></i></div>
+
+  <div class="gratis">
+    <span class="tag cheia">✓ Vaga confirmada</span>
+    <h1>Suas 10 aulas<span class="script">são 100% grátis</span></h1>
+    <p class="gratis-lead">Você vai receber <b>todas as aulas</b>, sem pagar nada. Um módulo novo por dia, de segunda a sexta, direto no seu WhatsApp e no seu app.</p>
+    <ul class="gratis-lista">
+      <li><b>10</b><span>aulas completas</span></li>
+      <li><b>5</b><span>módulos</span></li>
+      <li><b>R$ 0</b><span>para assistir</span></li>
+    </ul>
+  </div>
+
+  <div class="opcional-divisor"><span>Opcional</span></div>
+
+  <div class="card">
+    <h3 style="margin-bottom:4px">Quer também um certificado?</h3>
+    <p class="small muted">Só se você quiser comprovar que fez a Semana do Barbeiro. As aulas continuam grátis com ou sem ele.</p>
+    <div class="cert-linha">
+      <div><div class="rotulo">Certificado de Participação</div><div class="price" style="font-size:2.4rem">R$ 19,70</div><div class="small muted">pagamento único · Pix na hora, cartão ou boleto</div></div>
+    </div>
+    <ul class="list-ok" style="margin-top:12px">
+      <li>Certificado digital com o seu nome, emitido pela Barber School</li>
+      <li>Lista das 10 aulas e a carga horária da semana</li>
+      <li>Liberado no seu app quando você concluir as 10 aulas</li>
+    </ul>
+    <form id="form" novalidate>
+      <div class="field"><label for="cpf">CPF (obrigatório para emitir a cobrança)</label><input id="cpf" type="text" inputmode="numeric" placeholder="000.000.000-00" autocomplete="off"></div>
+      <button class="btn green" id="btn" type="submit">Quero o certificado por R$ 19,70</button>
+      <p class="erro" id="erro"></p>
+    </form>
+    <div class="pix" id="pix" hidden>
+      <div class="pix-cab"><span class="pix-selo">PIX</span><b>Pague R$ 19,70 pelo app do seu banco</b></div>
+      <img id="pixQr" alt="QR Code Pix" width="198" height="198">
+      <p class="small muted" style="margin:0 0 6px">Ou copie o código Pix e cole na opção <b>Pix copia e cola</b>:</p>
+      <div class="cupom"><code id="pixCopia"></code><button class="btn sm green" type="button" id="pixCopiar">Copiar</button></div>
+      <p class="pix-espera"><span class="ponto"></span> Aguardando o pagamento. Esta página atualiza sozinha.</p>
+      <a class="small" id="pixOutro" data-track="cert_cartao" href="#" target="_blank" rel="noopener">Prefiro pagar com cartão ou boleto</a>
+    </div>
+    <p class="small muted" style="margin:6px 0 0">Certificado de participação em curso livre. Não substitui a formação completa da Barber School.</p>
+  </div>
+
+  <a class="btn" id="nao" href="/obrigado" style="margin-top:14px">Não quero, só as aulas grátis</a>
+</div>
+<script src="/assets/config-publico.js"></script>
+<script src="/assets/common.js"></script>
+<script>
+(() => {
+  const { api, token, maskCpf, pixel } = sdb;
+  const t = token();
+  if (!t) { sdb.ir('/'); return; }
+  document.getElementById('nao').href = '/obrigado?t=' + t;
+  const cpf = document.getElementById('cpf'); maskCpf(cpf);
+  const $ = (id) => document.getElementById(id);
+  function mostrarPix(r) {
+    $('form').hidden = true; $('pix').hidden = false; sdb.track('cert_pix');
+    $('pixQr').src = 'data:image/png;base64,' + r.pix.qr;
+    $('pixCopia').textContent = r.pix.copia;
+    $('pixOutro').href = r.invoiceUrl;
+    $('pixCopiar').onclick = async () => {
+      try { await navigator.clipboard.writeText(r.pix.copia); sdb.toast('Código Pix copiado'); }
+      catch { const rg = document.createRange(); rg.selectNodeContents($('pixCopia')); const se = getSelection(); se.removeAllRanges(); se.addRange(rg); sdb.toast('Código selecionado: copie com o celular'); }
+    };
+    $('pix').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const checar = setInterval(async () => {
+      try { const s = await api('certificado?t=' + t); if (s.status === 'pago') { clearInterval(checar); sdb.ir('/obrigado?t=' + t + '&pago=1'); } } catch {}
+    }, 4000);
+  }
+  const btn = document.getElementById('btn'), erro = document.getElementById('erro');
+  document.getElementById('form').addEventListener('submit', async (e) => {
+    e.preventDefault(); erro.textContent = ''; btn.disabled = true; btn.textContent = 'Gerando pagamento...';
+    try {
+      const r = await api('certificado', { method: 'POST', body: { token: t, cpf: cpf.value } });
+      pixel('InitiateCheckout', { value: 19.70, currency: 'BRL', content_name: 'Certificado Semana do Barbeiro' });
+      if (r.pago) { sdb.ir('/obrigado?t=' + t + '&pago=1'); return; }
+      if (!r.pix) { sdb.ir(r.invoiceUrl); return; } // conta sem chave Pix: vai para a fatura do Asaas
+      mostrarPix(r);
+    } catch (err) {
+      erro.textContent = err.message; btn.disabled = false; btn.textContent = 'Quero o certificado por R$ 19,70';
+    }
+  });
+})();
+</script>
+</body>
+</html>
