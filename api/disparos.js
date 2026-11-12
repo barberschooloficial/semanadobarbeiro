@@ -57,6 +57,10 @@ const CAMPOS_CFG = [
     { chave: 'wa_limite_dia', rotulo: 'Máximo de avisos por grupo por dia', tipo: 'int' },
     { chave: 'wa_intervalo_min', rotulo: 'Extensão: espera mínima entre grupos (segundos)', tipo: 'int' },
     { chave: 'wa_intervalo_max', rotulo: 'Extensão: espera máxima entre grupos (segundos)', tipo: 'int' },
+    { chave: 'wa_bv_ativo', rotulo: 'Boas-vindas da Bia no privado para quem entra nos grupos da Semana', tipo: 'bool', ajuda: 'A extensão manda uma mensagem no privado para cada pessoa que entra num grupo marcado como "Semana do Barbeiro", uma vez por pessoa. Textos na aba Mensagens.' },
+    { chave: 'wa_bv_limite_dia', rotulo: 'Boas-vindas: máximo por dia', tipo: 'int', ajuda: 'O que passar fica para o dia seguinte. Protege o número contra bloqueio.' },
+    { chave: 'wa_bv_inicio', rotulo: 'Boas-vindas: a partir de', tipo: 'hora' },
+    { chave: 'wa_bv_fim', rotulo: 'Boas-vindas: até', tipo: 'hora', ajuda: 'Quem entra fora desse horário recebe na manhã seguinte.' },
     { chave: 'email_aquecimento', rotulo: 'Aquecer o envio de convites por e-mail', tipo: 'bool', ajuda: 'Convites para listas importadas começam pequenos e dobram a cada dia (50, 100, 200...) até o teto abaixo. Protege o domínio no Resend.' },
     { chave: 'email_aquecimento_inicio', rotulo: 'Convites no primeiro dia', tipo: 'int' },
     { chave: 'email_convite_dia', rotulo: 'Teto de convites por e-mail por dia', tipo: 'int', ajuda: 'O que passar fica para o dia seguinte sozinho. E-mails das aulas para quem se cadastrou não entram nesse limite.' },
@@ -376,7 +380,7 @@ module.exports = handler(['GET', 'POST'], async (req, res) => {
     const orig = Object.fromEntries([...COPIES, ...COPIES_GRUPO].map(c => [c.id, c]));
     const email = ajustar(COPIES, cfg).filter(c => c.canal === 'email').map(c => ({ id: c.id, titulo: c.titulo, assunto: c.assunto, texto: c.texto, quando: quandoTxt(c.quando), automatico: !!(c.quando || c.automatico), publico: c.publico || 'leads', filtro: descrever(c.filtro || {}), ajustada: !!c.ajustada, original: { assunto: orig[c.id].assunto, texto: orig[c.id].texto } }));
     const wa = ajustar(COPIES, cfg).filter(c => c.canal === 'whatsapp').map(c => ({ id: c.id, titulo: c.titulo, resumo: c.resumo, quando: quandoTxt(c.quando), flow_cfg: c.flow_cfg, flow_ns: c.flow_cfg ? cfg[c.flow_cfg] || '' : '', publico: c.publico || 'leads', filtro: descrever(c.filtro || {}) }));
-    const grupos = ajustar(COPIES_GRUPO, cfg).map(c => ({ id: c.id, titulo: c.titulo, texto: c.texto, quando: c.auto ? c.auto.map(quandoTxt).join(', ') : null, automatico: !!c.auto, ajustada: !!c.ajustada, original: { texto: orig[c.id].texto } }));
+    const grupos = ajustar(COPIES_GRUPO, cfg).map(c => ({ id: c.id, titulo: c.titulo, texto: c.texto, dica: c.dica || null, quando: c.auto ? c.auto.map(quandoTxt).join(', ') : c.dm ? 'no privado, quando alguém entra num grupo da Semana' : null, automatico: !!c.auto || !!c.dm, ajustada: !!c.ajustada, original: { texto: orig[c.id].texto } }));
     return send(res, 200, { email, whatsapp: wa, grupos });
   }
   if (acao === 'copy_salvar') {
@@ -390,7 +394,7 @@ module.exports = handler(['GET', 'POST'], async (req, res) => {
       return send(res, 200, { ok: true });
     }
     const texto = String(b.texto || '').trim().slice(0, 20000), assunto = String(b.assunto || '').trim().slice(0, 200);
-    if (texto.length < 2) throw fail(400, 'O texto não pode ficar vazio');
+    if (texto.length < 2 && !(c.dm && texto === '-')) throw fail(400, 'O texto não pode ficar vazio');
     if (c.assunto != null && !assunto) throw fail(400, 'O assunto não pode ficar vazio');
     await G.cfgSet(`copy_${id}`, JSON.stringify(c.assunto != null ? { assunto, texto } : { texto }));
     return send(res, 200, { ok: true });
