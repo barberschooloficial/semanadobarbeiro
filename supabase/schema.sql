@@ -358,3 +358,11 @@ insert into sdb_config (chave, valor, descricao) values
   ('cert_promo_horas', '24',    'Horas de preço promocional depois do cadastro'),
   ('cert_ultima_min',  '10',    'Minutos da última chance (link da Bia)')
 on conflict (chave) do nothing;
+
+-- Certificado: forma de pagamento (PIX ou CREDIT_CARD; boleto não) e lembrete da Bia 5 min depois
+alter table sdb_leads add column if not exists cert_forma text;
+alter table sdb_wa_dm add column if not exists tipo text not null default 'bv';   -- bv (boas-vindas) | cert (lembrete do certificado)
+insert into sdb_config (chave, valor, descricao) values
+  ('cert_lembrete_ativo', '1', 'Lembrete no WhatsApp para quem gerou o certificado e não pagou'),
+  ('cert_lembrete_min',   '5', 'Minutos depois de gerar a cobrança')
+on conflict (chave) do nothing;
