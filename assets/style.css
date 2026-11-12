@@ -490,6 +490,8 @@ footer { border-top: 1px solid #2c251d; }
 .pix-selo { font: 800 .7rem var(--f-texto); letter-spacing: .14em; color: #fff; background: #32bcad; border-radius: 999px; padding: 4px 10px; }
 .pix img { width: 198px; height: 198px; margin: 0 auto 12px; border: 6px solid #fff; border-radius: 8px; box-shadow: 0 0 0 1px var(--linha); image-rendering: pixelated; }
 .pix .cupom code { font-size: .74rem; letter-spacing: 0; word-break: break-all; text-align: left; max-height: 66px; overflow: auto; }
+.pix-tempo { margin: 0 0 12px; font-size: .9rem; color: var(--tinta-2); }
+.pix-tempo b { color: var(--tinta); font-variant-numeric: tabular-nums; }
 .pix-espera { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 14px 0 8px; font-size: .86rem; font-weight: 700; color: var(--ok); }
 .pix-espera .ponto { width: 9px; height: 9px; border-radius: 50%; background: var(--ok); animation: pulsa 1.2s ease-in-out infinite; }
 @keyframes pulsa { 50% { transform: scale(1.6); opacity: .35; } }

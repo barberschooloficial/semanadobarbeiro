@@ -450,7 +450,7 @@
       box.innerHTML = `<span class="rotulo">Certificado</span><h3 style="margin-top:6px">Pago ✓</h3><p class="small muted">Ele libera aqui quando você concluir as 10 aulas (${s.progresso.assistidas}/${s.progresso.total}). Ao terminar cada aula, toque em "Concluí esta aula".</p>`;
     } else if (c.status === 'pendente' && c.invoice_url) {
       box.innerHTML = `<span class="rotulo">Certificado</span><h3 style="margin-top:6px">Pagamento em aberto</h3><p class="small muted">Assim que o pagamento cair, ele fica marcado como pago aqui.</p><button class="btn green" id="btnPagarCert">Pagar ${brl(c.preco)} com Pix</button><button class="btn ghost" style="margin-top:8px" id="btnRecarregar">Já paguei, atualizar</button>`;
-      $('btnRecarregar').onclick = () => carregar();
+      $('btnRecarregar').onclick = async () => { try { await api('certificado?t=' + T); } catch {} carregar(); };
       $('btnPagarCert').onclick = () => { abrirCpf('certificado'); cobrarCert({ token: T, origem: 'app' }); };
     } else if (s.expirou && s.curso.status !== 'pago') {
       box.innerHTML = ''; box.hidden = true; // semana encerrada sem as aulas: não dá mais para concluir as 10 aulas
@@ -508,7 +508,24 @@
   }
   // ---------- Pix do certificado dentro do app ----------
   let pixTimer = null;
-  const pararPix = () => { if (pixTimer) clearInterval(pixTimer); pixTimer = null; };
+  const pararPix = () => { if (pixTimer) clearInterval(pixTimer); pixTimer = null; if (tempoTimer) clearInterval(tempoTimer); };
+
+  // Contador até o Pix vencer (o Asaas devolve "AAAA-MM-DD HH:MM:SS" no horário de Brasília)
+  let tempoTimer = null;
+  function contador(expira, el) {
+    if (tempoTimer) clearInterval(tempoTimer);
+    const fim = expira ? Date.parse(String(expira).replace(' ', 'T') + (/[zZ]|[+-]\d\d:?\d\d$/.test(expira) ? '' : '-03:00')) : NaN;
+    if (!el) return;
+    if (!fim) { el.hidden = true; return; }
+    const pinta = () => {
+      const r = Math.max(0, fim - Date.now()), h = Math.floor(r / 3600e3), m = Math.floor(r % 3600e3 / 60e3), s = Math.floor(r % 60e3 / 1e3);
+      const dois = (n) => String(n).padStart(2, '0');
+      el.hidden = false;
+      el.innerHTML = r > 0 ? `Este Pix vence em <b>${h ? h + 'h ' : ''}${dois(m)}min ${dois(s)}s</b>` : '<b>Este Pix venceu.</b> Feche e gere um novo.';
+      if (!r) clearInterval(tempoTimer);
+    };
+    pinta(); tempoTimer = setInterval(pinta, 1000);
+  }
   function mostrarPix(r) {
     $('cpfForm').hidden = true; $('pixBox').hidden = false;
     $('cpfTexto').textContent = 'Abra o app do seu banco e pague com Pix. Assim que o pagamento cair, o certificado fica marcado como pago aqui.';
@@ -516,6 +533,7 @@
     $('pixQr').src = 'data:image/png;base64,' + r.pix.qr;
     $('pixCopia').textContent = r.pix.copia;
     $('pixOutro').href = r.invoiceUrl;
+    contador(r.pix.expira, $('pixTempo'));
     $('pixCopiar').onclick = async () => {
       try { await navigator.clipboard.writeText(r.pix.copia); toast('Código Pix copiado. Cole no app do seu banco.'); }
       catch { const rg = document.createRange(); rg.selectNodeContents($('pixCopia')); const se = getSelection(); se.removeAllRanges(); se.addRange(rg); toast('Código selecionado: copie e cole no banco.'); }
