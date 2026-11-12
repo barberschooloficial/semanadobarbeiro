@@ -1,7 +1,7 @@
 // Avisos em grupos, comunidades e canal do WhatsApp, enviados pela extensão do Chrome (pasta extensao-whatsapp/).
 // A extensão roda no WhatsApp Web do número de avisos, busca a fila aqui e devolve o resultado de cada envio.
 //
-// Extensão (header x-ext-key = WA_EXT_KEY):  POST ?acao=wa_sync · GET ?acao=wa_fila · POST ?acao=wa_resultado
+// Extensão (header x-ext-key = WA_EXT_KEY):  POST ?acao=wa_sync · GET ?acao=wa_fila|wa_resumo · POST ?acao=wa_resultado
 // Painel   (header x-admin-key):             GET ?acao=wa_painel · POST ?acao=wa_destino|wa_criar|wa_cancelar|wa_semana
 const crypto = require('crypto');
 const { db, config } = require('./db');
@@ -70,6 +70,34 @@ async function semanaAuto() {
   await garantirCalendario(turma).catch(e => console.error('grupos calendario', e.message));
 }
 
+// Resumo para a extensão e o painel: sincronização, grupos que recebem, fila e últimos envios
+async function resumo() {
+  const cfg = await config();
+  const t = agoraIso();
+  const visto = cfg.wa_ext_visto || null;
+  const ativos = await todos('sdb_wa_destinos', 'select=id,nome,tipo,categoria&ativo=eq.true&order=nome.asc');
+  const total = (await todos('sdb_wa_destinos', 'select=id&order=id.asc')).length;
+  const abertos = await db.select('sdb_wa_avisos', 'select=id,titulo,agendar_em,status,total,enviados,falhas&status=in.(agendado,enviando)&order=agendar_em.asc&limit=50');
+  const agoraFila = abertos.filter(a => a.agendar_em <= t);
+  const ultimos = await db.select('sdb_wa_aviso_envios', 'select=aviso_id,destino_id,status,erro,enviado_em&order=enviado_em.desc&limit=6');
+  const nomesD = Object.fromEntries((ultimos.length ? await db.select('sdb_wa_destinos', `select=id,nome&id=in.(${[...new Set(ultimos.map(u => `"${u.destino_id}"`))].join(',')})`) : []).map(d => [d.id, d.nome]));
+  const titulos = Object.fromEntries((ultimos.length ? await db.select('sdb_wa_avisos', `select=id,titulo&id=in.(${[...new Set(ultimos.map(u => u.aviso_id))].join(',')})`) : []).map(a => [a.id, a.titulo]));
+  return {
+    agora: t,
+    extensao: { visto_em: visto, online: !!visto && agora() - Date.parse(visto) < 3 * 60e3, numero: cfg.wa_ext_numero || '' },
+    sync: { em: cfg.wa_ext_sync_em || null, total: Number(cfg.wa_ext_sync_total || total) },
+    destinos: { total, ativos: ativos.map(d => ({ nome: d.nome, tipo: d.tipo, categoria: CATEGORIAS[d.categoria] || d.categoria })) },
+    fila: {
+      agora: agoraFila.length,
+      pendentes_agora: agoraFila.reduce((n, a) => n + Math.max(0, (a.total || 0) - (a.enviados || 0) - (a.falhas || 0)), 0),
+      proximos: abertos.filter(a => a.agendar_em > t).slice(0, 5).map(a => ({ titulo: a.titulo, agendar_em: a.agendar_em, total: a.total })),
+      total_agendados: abertos.length,
+    },
+    ultimos: ultimos.map(u => ({ titulo: titulos[u.aviso_id] || 'Aviso', destino: nomesD[u.destino_id] || u.destino_id, status: u.status, erro: u.erro, em: u.enviado_em })),
+    auto: cfg.grupos_auto !== '0',
+  };
+}
+
 // ---------- extensão ----------
 async function extensao(acao, req, res, b) {
   if (!extOk(req)) return send(res, 401, { erro: 'Chave da extensão inválida' });
@@ -90,7 +118,9 @@ async function extensao(acao, req, res, b) {
       else await db.insert('sdb_wa_destinos', { id, ...base, categoria: tipo === 'canal' ? 'canal' : tipo === 'comunidade' ? 'comunidade' : 'nenhuma', ativo: false });
       n++;
     }
-    return send(res, 200, { ok: true, recebidos: n });
+    await cfgSet('wa_ext_sync_em', agoraIso());
+    await cfgSet('wa_ext_sync_total', n);
+    return send(res, 200, { ok: true, recebidos: n, resumo: await resumo() });
   }
 
   if (acao === 'wa_fila') {
@@ -116,6 +146,8 @@ async function extensao(acao, req, res, b) {
     }
     return send(res, 200, { aviso: null });
   }
+
+  if (acao === 'wa_resumo') return send(res, 200, await resumo());
 
   if (acao === 'wa_resultado') {
     const id = Number(b.aviso_id), destino = txt(b.destino_id, 60);
@@ -144,7 +176,7 @@ async function painel(acao, req, res, b) {
     return send(res, 200, {
       destinos, avisos, categorias: CATEGORIAS, copies: ajustar(COPIES_GRUPO, cfg).map(c => ({ id: c.id, titulo: c.titulo, texto: c.texto, auto: !!c.auto, ajustada: !!c.ajustada })),
       extensao: { visto_em: visto, online: !!visto && agora() - Date.parse(visto) < 3 * 60e3, numero: cfg.wa_ext_numero || '', versao: cfg.wa_ext_versao || '', chave_ok: (process.env.WA_EXT_KEY || '').length >= 16, chave: process.env.WA_EXT_KEY || '' }, // só chega aqui quem passou pela senha do painel
-      auto: cfg.grupos_auto !== '0', limite_dia: Number(cfg.wa_limite_dia || 4), agora: agoraIso(),
+      auto: cfg.grupos_auto !== '0', limite_dia: Number(cfg.wa_limite_dia || 4), agora: agoraIso(), resumo: await resumo(),
     });
   }
 
@@ -205,7 +237,7 @@ async function painel(acao, req, res, b) {
   return send(res, 400, { erro: 'Ação inválida' });
 }
 
-const EXT = new Set(['wa_sync', 'wa_fila', 'wa_resultado']);
+const EXT = new Set(['wa_sync', 'wa_fila', 'wa_resultado', 'wa_resumo']);
 const PAINEL = new Set(['wa_painel', 'wa_destino', 'wa_criar', 'wa_cancelar', 'wa_envios', 'wa_semana']);
 
 module.exports = { EXT, PAINEL, extensao, painel, garantirCalendario, CATEGORIAS, extOk, cfgSet };
