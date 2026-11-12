@@ -14,9 +14,11 @@ function segundaDa(ms) {
   return ymd(ms - ((d + 6) % 7) * DIA);
 }
 
-function turmaParaCadastro(ms) {
+// ate = último dia da semana que ainda entra na turma atual (1 = segunda ... 6 = sábado). Padrão: quarta.
+function turmaParaCadastro(ms, ate = 3) {
   const d = dow(ms);
-  if (d >= 1 && d <= 3) return segundaDa(ms);
+  const limite = Math.min(6, Math.max(1, Number(ate) || 3));
+  if (d >= 1 && d <= limite) return segundaDa(ms);
   return ymd(Date.parse(`${segundaDa(ms)}T12:00:00-03:00`) + 7 * DIA);
 }
 
