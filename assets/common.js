@@ -114,10 +114,10 @@
   document.addEventListener('click', (e) => { const el = e.target.closest && e.target.closest('[data-track]'); if (el) track(el.dataset.track, el.dataset.trackDetalhe || null); }, true);
 
   // Turma de quem se cadastra agora (mesma regra do servidor, api/_lib/turma.js): devolve a segunda-feira em UTC 00h
-  function turma(ms = Date.now()) {
+  function turma(ms = Date.now(), ate = 3) {
     const b = new Date(ms - 3 * 3600e3); // horário de Brasília
     const dow = b.getUTCDay(), seg = Date.UTC(b.getUTCFullYear(), b.getUTCMonth(), b.getUTCDate()) - ((dow + 6) % 7) * 864e5;
-    return new Date(dow >= 1 && dow <= 3 ? seg : seg + 7 * 864e5);
+    return new Date(dow >= 1 && dow <= ate ? seg : seg + 7 * 864e5);
   }
 
   window.sdb = { turma, track, api, store, qs, ir, caminho, DEMO, token, maskWhats, maskCpf, toast, esc, quando, brl, pixel, whatsLink, ligarSuporte, C };
