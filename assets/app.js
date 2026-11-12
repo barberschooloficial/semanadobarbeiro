@@ -25,7 +25,8 @@
   async function carregar() {
     if (!T) return mostrarLogin();
     try {
-      estado = await api('me', { token: T });
+      estado = await api(querOferta ? 'me?oferta=1' : 'me', { token: T }); // ?oferta=1: link da última chance (Bia)
+      querOferta = false;
       desvio = Date.parse(estado.agora) - Date.now();
     } catch (err) {
       if (err.status === 401) { store.del('sdb_token'); T = null; return mostrarLogin(); }
@@ -440,7 +441,17 @@
 
   // Capa da aula: miniatura do próprio vídeo no YouTube (cai na imagem padrão se não houver)
   const capa = (a) => a && /^[\w-]{6,20}$/.test(a.youtube_id || '') ? `url('https://i.ytimg.com/vi/${a.youtube_id}/hqdefault.jpg'), url('/assets/img/aula.jpg')` : `url('/assets/img/aula.jpg')`;
-  let querCert = qs('comprar') === 'certificado';
+  let querOferta = qs('oferta') === '1';
+  let querCert = qs('comprar') === 'certificado' || querOferta;
+  // Preço do certificado: de R$ 47,70 por R$ 19,70 (24 h do cadastro ou última chance de 10 min), só no Pix
+  function precoCertHtml(c) {
+    if (!c.promo) return `<div class="price" style="font-size:2.4rem">${brl(c.preco || 19.7)}</div>`;
+    const ult = c.promo_fase === 'ultima';
+    return `<div class="price" style="font-size:2.4rem"><s>${brl(c.preco_cheio)}</s>${brl(c.preco)}</div>
+      <p class="small" style="margin:4px 0 6px"><b>${ult ? 'Última chance' : 'Preço das primeiras 24 horas'}, só no Pix.</b> Depois volta para ${brl(c.preco_cheio)}.</p>
+      ${c.promo_ate ? `<div class="countdown claro" id="cdCert" style="margin:6px 0 4px"></div>` : ''}`;
+  }
+  function contaCert(c) { if (c.promo && c.promo_ate && $('cdCert')) contagem('cert', c.promo_ate, $('cdCert'), false, () => carregar()); else pararContagem('cert'); }
   function renderCert(s) {
     const c = s.certificado, box = $('certBox');
     box.hidden = false;
@@ -449,15 +460,16 @@
     } else if (c.status === 'pago') {
       box.innerHTML = `<span class="rotulo">Certificado</span><h3 style="margin-top:6px">Pago ✓</h3><p class="small muted">Ele libera aqui quando você concluir as 10 aulas (${s.progresso.assistidas}/${s.progresso.total}). Ao terminar cada aula, toque em "Concluí esta aula".</p>`;
     } else if (c.status === 'pendente' && c.invoice_url) {
-      box.innerHTML = `<span class="rotulo">Certificado</span><h3 style="margin-top:6px">Pagamento em aberto</h3><p class="small muted">Assim que o pagamento cair, ele fica marcado como pago aqui.</p><button class="btn green" id="btnPagarCert">Pagar ${brl(c.preco)} com Pix</button><button class="btn ghost" style="margin-top:8px" id="btnRecarregar">Já paguei, atualizar</button>`;
+      box.innerHTML = `<span class="rotulo">Certificado</span><h3 style="margin-top:6px">Pagamento em aberto</h3>${precoCertHtml(c)}<p class="small muted">Assim que o pagamento cair, ele fica marcado como pago aqui.</p><button class="btn green" id="btnPagarCert">Pagar ${brl(c.preco)} com Pix</button><button class="btn ghost" style="margin-top:8px" id="btnRecarregar">Já paguei, atualizar</button>`;
       $('btnRecarregar').onclick = async () => { try { await api('certificado?t=' + T); } catch {} carregar(); };
       $('btnPagarCert').onclick = () => { abrirCpf('certificado'); cobrarCert({ token: T, origem: 'app' }); };
     } else if (s.expirou && s.curso.status !== 'pago') {
       box.innerHTML = ''; box.hidden = true; // semana encerrada sem as aulas: não dá mais para concluir as 10 aulas
     } else {
-      box.innerHTML = `<span class="rotulo">Opcional</span><h3 style="margin-top:6px">Certificado de Participação</h3><p class="small muted">Comprove que você fez a Semana do Barbeiro. Certificado digital com seu nome, liberado ao concluir as 10 aulas.</p><div class="price" style="font-size:2.4rem">${brl(c.preco || 19.7)}</div><button class="btn green" id="btnCert" style="margin-top:10px">Quero meu certificado</button>`;
+      box.innerHTML = `<span class="rotulo">Opcional</span><h3 style="margin-top:6px">Certificado de Participação</h3><p class="small muted">Comprove que você fez a Semana do Barbeiro. Certificado digital com seu nome, liberado ao concluir as 10 aulas.</p>${precoCertHtml(c)}<button class="btn green" id="btnCert" style="margin-top:10px">Quero meu certificado${c.promo ? ` por ${brl(c.preco)}` : ''}</button>`;
       $('btnCert').onclick = () => abrirCpf('certificado');
     }
+    contaCert(c);
     // Link direto de compra (?comprar=certificado, usado no catálogo do WhatsApp): depois do login já abre o pagamento
     if (querCert) {
       querCert = false;
@@ -497,8 +509,9 @@
     produtoCpf = produto; $('cpfErro').textContent = '';
     const s = estado;
     if (produto === 'certificado') {
-      $('cpfTitulo').textContent = `Certificado — ${brl(s.certificado.preco || 19.7)}`;
-      $('cpfTexto').textContent = 'Informe seu CPF para emitir a cobrança. Você paga com Pix, cartão ou boleto.';
+      const c = s.certificado;
+      $('cpfTitulo').textContent = c.promo ? `Certificado — de ${brl(c.preco_cheio)} por ${brl(c.preco)}` : `Certificado — ${brl(c.preco || 19.7)}`;
+      $('cpfTexto').textContent = c.promo ? `Informe seu CPF para emitir o Pix. O preço promocional é só no Pix${c.promo_ate ? `, até ${quando(c.promo_ate)}` : ''}.` : 'Informe seu CPF para emitir a cobrança. Você paga com Pix, cartão ou boleto.';
     } else {
       $('cpfTitulo').textContent = `Barbeearia — ${brl(s.barberhub.preco)}${s.barberhub.ciclo === 'UNICO' ? '' : '/mês'}`;
       $('cpfTexto').textContent = 'Informe seu CPF para emitir a cobrança. Você paga com Pix, cartão ou boleto.';
@@ -533,6 +546,8 @@
     $('pixQr').src = 'data:image/png;base64,' + r.pix.qr;
     $('pixCopia').textContent = r.pix.copia;
     $('pixOutro').href = r.invoiceUrl;
+    $('pixOutro').hidden = !!(r.preco && r.preco.promo); // preço promocional: só Pix
+    if (r.preco) $('pixValor').textContent = `Pague ${brl(r.preco.valor)} pelo app do seu banco`;
     contador(r.pix.expira, $('pixTempo'));
     $('pixCopiar').onclick = async () => {
       try { await navigator.clipboard.writeText(r.pix.copia); toast('Código Pix copiado. Cole no app do seu banco.'); }
