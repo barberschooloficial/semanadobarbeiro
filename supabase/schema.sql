@@ -205,6 +205,9 @@ select
   count(*) filter (where last_seen_at is not null)      as acessaram_app,
   (select count(distinct lead_id) from sdb_progresso)   as assistiram_1_aula
 from sdb_leads;
+-- A view não passa pelo RLS: só o servidor (service_role) lê
+alter view sdb_funil set (security_invoker = true);
+revoke all on sdb_funil from anon, authenticated;
 alter view sdb_funil set (security_invoker = true);
 
 -- ===== Seeds (horário de Brasília, -03:00) =====
@@ -244,10 +247,10 @@ insert into sdb_config (chave, valor, descricao) values
 on conflict (chave) do nothing;
 
 insert into sdb_aulas (ordem, dia, titulo, descricao, duracao_min, libera_em) values
-  (1,  1, 'Equipamentos básicos do barbeiro',      'O que você precisa ter na bancada para começar.',            15, '2026-11-02T08:00:00-03:00'),
-  (2,  1, 'Tudo sobre pentes',                      'Qual pente usar em cada etapa do corte.',                     12, '2026-11-02T08:00:00-03:00'),
-  (3,  2, 'Corte Mid Fade com Pompadour',           'Passo a passo completo do degradê médio.',                    25, '2026-11-03T08:00:00-03:00'),
-  (4,  2, 'Dicas sobre tesouras',                   'Como escolher, usar e cuidar das tesouras, na live do professor Cris Aita.', 37, '2026-11-03T08:00:00-03:00'),
+  (1,  1, 'Corte Mid Fade com Pompadour',           'Passo a passo completo do degradê médio.',                    25, '2026-11-02T08:00:00-03:00'),
+  (2,  1, 'Dicas sobre tesouras',                   'Como escolher, usar e cuidar das tesouras, na live do professor Cris Aita.', 37, '2026-11-02T08:00:00-03:00'),
+  (3,  2, 'Equipamentos básicos do barbeiro',      'O que você precisa ter na bancada para começar.',            15, '2026-11-03T08:00:00-03:00'),
+  (4,  2, 'Tudo sobre pentes',                      'Qual pente usar em cada etapa do corte.',                     12, '2026-11-03T08:00:00-03:00'),
   (5,  3, 'Como cortar cabelo com muito redemoinho','A dica que resolve o redemoinho sem estragar o corte.',       12, '2026-11-04T08:00:00-03:00'),
   (6,  3, 'Corte Razor Part',                       'Risca na navalha com segurança.',                             15, '2026-11-04T08:00:00-03:00'),
   (7,  4, 'Barba passo a passo',                    'Preparação, toalha quente, desenho e acabamento.',            20, '2026-11-05T08:00:00-03:00'),
@@ -314,4 +317,33 @@ on conflict (chave) do nothing;
 
 insert into sdb_config (chave, valor, descricao) values
   ('whatsapp_suporte', '', 'WhatsApp do suporte (55 + DDD + número). Troque pela aba Configurações do painel')
+on conflict (chave) do nothing;
+-- Boas-vindas no privado (Bia do suporte) para quem entra nos grupos da Semana
+create table if not exists sdb_wa_dm (
+  id          bigserial primary key,
+  chave       text not null unique,                 -- bv:<número ou id>: uma boas-vindas por pessoa
+  grupo_id    text,
+  para        text not null,                        -- 55...@c.us (ou ...@lid quando o WhatsApp esconde o número)
+  pn          text,
+  lead_id     uuid references sdb_leads(id) on delete set null,
+  nome_wa     text,
+  texto       text,                                 -- montado na hora do envio
+  status      text not null default 'pendente',     -- pendente, enviado, falha, expirado
+  tentativas  integer not null default 0,
+  tentado_em  timestamptz,
+  agendar_em  timestamptz not null default now(),
+  enviado_em  timestamptz,
+  erro        text,
+  msg_id      text,
+  created_at  timestamptz not null default now()
+);
+create index if not exists sdb_wa_dm_fila_idx on sdb_wa_dm (status, agendar_em);
+alter table sdb_wa_dm enable row level security;
+revoke all on sdb_wa_dm from anon, authenticated;
+
+insert into sdb_config (chave, valor, descricao) values
+  ('wa_bv_ativo',      '1',     'Boas-vindas da Bia no privado para quem entra nos grupos da Semana (0 desliga)'),
+  ('wa_bv_limite_dia', '60',    'Boas-vindas no privado: máximo por dia'),
+  ('wa_bv_inicio',     '08:00', 'Boas-vindas no privado: a partir de'),
+  ('wa_bv_fim',        '21:00', 'Boas-vindas no privado: até')
 on conflict (chave) do nothing;
