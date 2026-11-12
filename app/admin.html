@@ -140,6 +140,17 @@
   @media (min-width: 760px) { .filtros-d { grid-template-columns: repeat(5, 1fr); } }
   .contagem { margin: 12px 0 0; padding: 12px 14px; border-radius: 10px; background: #fbf3df; border: 1px solid var(--bronze-claro); font-size: .92rem; }
   .contagem b { font-family: var(--f-display); font-weight: 400; font-size: 1.5rem; }
+  .contagem.atualizando { opacity: .7; transition: opacity .2s; }
+  /* Régua do disparo (listas importadas): 0 a 100% enviado, depois entregues, abertos, cliques e cadastros */
+  .regua-topo { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: .82rem; color: var(--tinta-2); margin-bottom: 8px; }
+  .regua-barra { position: relative; height: 26px; border-radius: 999px; background: #efe6d2; overflow: hidden; border: 1px solid var(--bronze-claro); }
+  .regua-barra i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #8a6730, #b8893f); transition: width .6s ease; }
+  .regua-barra span { position: relative; display: block; text-align: center; line-height: 24px; font-weight: 700; font-size: .85rem; color: #15120e; }
+  .regua-nums { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; margin: 10px 0 8px; }
+  .regua-nums div { background: #fffdf8; border: 1px solid var(--linha, #e3d6bd); border-radius: 10px; padding: 8px 10px; }
+  .regua-nums b { display: block; font-family: var(--f-display); font-weight: 400; font-size: 1.35rem; line-height: 1.1; }
+  .regua-nums span { font-size: .72rem; color: var(--tinta-2); text-transform: uppercase; letter-spacing: .06em; }
+  .regua-nums small { display: block; font-size: .75rem; color: #6f6556; }
   .confirmar { margin-top: 16px; padding: 16px; border-radius: 12px; border: 1.5px solid var(--tinta); background: var(--cartao); }
   .confirmar dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0 0 14px; font-size: .9rem; }
   .confirmar dt { color: var(--muted); } .confirmar dd { margin: 0; font-weight: 700; }
@@ -825,18 +836,47 @@
     }
     $('confirmar').hidden = true; contarD();
   }
-  function contarD() {
+  // Contagem do público. Nas listas importadas vira uma régua (0 a 100% enviado, entregues, abertos, cliques),
+  // atualizada a cada 10 s sem apagar os números (antes trocava por "Calculando..." e piscava).
+  let reguaChave = '';
+  function contarD(silencioso) {
     clearTimeout(D.contaT);
-    $('dConta').textContent = 'Calculando...';
+    const chave = JSON.stringify([canalD(), publicoD(), filtroD()]);
+    const el = $('dConta');
+    if (!silencioso && chave !== reguaChave) { el.classList.add('atualizando'); if (!el.dataset.ok) el.textContent = 'Calculando...'; }
     D.contaT = setTimeout(async () => {
       try {
         const r = await fetchD('contar', { canal: canalD(), filtro: filtroD(), publico: publicoD() });
-        D.aptos = r.aptos;
+        if (JSON.stringify([canalD(), publicoD(), filtroD()]) !== chave) return; // o filtro mudou no meio: a próxima contagem pinta
+        reguaChave = chave; D.aptos = r.aptos; el.dataset.ok = '1';
         const custo = canalD() === 'whatsapp' ? ` · custo estimado na Meta: <b style="font-size:1.1rem">US$ ${(r.aptos * D.dados.custo_wa).toFixed(2)}</b>` : '';
-        $('dConta').innerHTML = `<b>${r.aptos}</b> ${r.aptos === 1 ? 'pessoa recebe' : 'pessoas recebem'} <span class="muted">(${r.publico} no público${canalD() === 'email' ? ', sem quem saiu da lista' : publicoD() === 'contatos' ? ', com WhatsApp válido' : ', só quem está no ManyChat'})</span>${custo}`;
-      } catch (e) { $('dConta').textContent = e.message; }
-    }, 250);
+        const recebe = `<b>${r.aptos.toLocaleString('pt-BR')}</b> ${r.aptos === 1 ? 'pessoa recebe' : 'pessoas recebem'} este disparo <span class="muted">(${r.publico.toLocaleString('pt-BR')} no filtro${canalD() === 'email' ? ', sem quem saiu da lista' : publicoD() === 'contatos' ? ', com WhatsApp válido' : ', só quem está no ManyChat'})</span>${custo}`;
+        if (!r.regua) { el.innerHTML = recebe; return; }
+        const n = (v) => v == null ? '—' : Number(v).toLocaleString('pt-BR');
+        const pc = (a, b) => a == null || !b ? '' : `${Math.round(a / b * 100)}%`;
+        const prog = r.total ? Math.min(100, Math.round(r.enviados / r.total * 100)) : 0;
+        const nomeBloco = [$('cdLista').value, $('cdBloco').value === '-' ? 'sem bloco' : $('cdBloco').value || 'todos os blocos', $('cdRegiao').value].filter(Boolean).join(' · ');
+        el.innerHTML = `<div class="regua-topo"><span><b style="font-size:1rem">${esc(nomeBloco)}</b></span><span>atualiza a cada 10 s · ${esc(new Date(r.em || Date.now()).toLocaleTimeString('pt-BR'))}</span></div>
+          <div class="regua-barra" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${prog}"><i style="width:${prog}%"></i><span>${prog}% enviado · ${n(r.enviados)} de ${n(r.total)}</span></div>
+          <div class="regua-nums">
+            <div><span>Total</span><b>${n(r.total)}</b><small>no bloco</small></div>
+            <div><span>Enviados</span><b>${n(r.enviados)}</b><small>${pc(r.enviados, r.total)} do total</small></div>
+            <div><span>Entregues</span><b>${n(r.entregues)}</b><small>${r.entregues == null || (!r.entregues && r.enviados) ? 'aguardando o Resend' : pc(r.entregues, r.enviados) + ' dos enviados'}</small></div>
+            <div><span>Abriram</span><b>${n(r.abertos)}</b><small>${r.enviados ? pc(r.abertos, r.enviados) + ' dos enviados' : '—'}</small></div>
+            <div><span>Clicaram</span><b>${n(r.clicaram)}</b><small>${r.enviados ? pc(r.clicaram, r.enviados) + ' dos enviados' : '—'}</small></div>
+            <div><span>Cadastraram</span><b>${n(r.cadastraram)}</b><small>${r.enviados ? pc(r.cadastraram, r.enviados) + ' dos enviados' : '—'}</small></div>
+            <div><span>Saíram</span><b>${n((r.sairam || 0))}</b><small>${r.devolvidos ? `${n(r.devolvidos)} devolvidos` : 'descadastro'}</small></div>
+          </div>
+          <div>${recebe}</div>`;
+      } catch (e) { if (!el.dataset.ok) el.textContent = e.message; }
+      finally { el.classList.remove('atualizando'); }
+    }, silencioso ? 0 : 250);
   }
+  // Régua ao vivo: com a aba Disparos aberta e a janela visível, recalcula a cada 10 s
+  setInterval(() => {
+    const aba = document.querySelector('[data-aba][aria-selected="true"]')?.dataset.aba;
+    if (aba === 'disparos' && !document.hidden && D.dados && publicoD() === 'contatos') contarD(true);
+  }, 10000);
   document.querySelectorAll('input[name=canal]').forEach(i => i.onchange = () => { montarCopies(); $('confirmar').hidden = true; });
   document.querySelectorAll('input[name=quando]').forEach(i => i.onchange = () => { $('dData').hidden = quandoD() !== 'agendar'; });
   $('dCopy').onchange = aplicarCopy;
@@ -956,6 +996,9 @@
     const d = await fetchD('config');
     $('cfgGrid').innerHTML = '';
     $('cfgChaves').innerHTML = (d.chaves || []).map(c => `<div style="display:flex;gap:10px;align-items:baseline;padding:7px 0;border-top:1px solid rgba(0,0,0,.07);flex-wrap:wrap"><span class="canal-st ${c.ok ? 'ok' : ''}" style="margin:0"><i></i>${c.ok ? 'gravada' : 'FALTA'}</span><b>${esc(c.rotulo)}</b><code>${esc(c.nome)}</code><span class="small muted">${esc(c.obs)}</span></div>`).join('');
+    // Webhook do Resend (e-mail entregue / devolvido): a URL leva uma chave própria, só aparece aqui
+    if (d.webhooks?.resend) $('cfgChaves').insertAdjacentHTML('beforeend', `<div style="padding:10px 0 0;border-top:1px solid rgba(0,0,0,.07)"><b>Webhook do Resend</b> <span class="small muted">— Resend → Webhooks → Add endpoint, eventos email.delivered, email.bounced e email.complained. Mostra "Entregues" na régua dos disparos.</span><div class="cupom" style="margin-top:6px"><code id="whResend" style="word-break:break-all">${esc(d.webhooks.resend)}</code><button class="btn sm" type="button" id="whResendCp">Copiar</button></div></div>`);
+    if ($('whResendCp')) $('whResendCp').onclick = () => navigator.clipboard.writeText(d.webhooks.resend).then(() => sdb.toast('URL copiada'));
     d.grupos.forEach((g, gi) => {
       const card = document.createElement('div'); card.className = 'card' + (gi === 0 ? ' cfg-destaque' : '');
       card.innerHTML = `<h3>${esc(g.titulo)}</h3>`;
