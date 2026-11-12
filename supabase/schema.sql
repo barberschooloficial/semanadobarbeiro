@@ -347,3 +347,14 @@ insert into sdb_config (chave, valor, descricao) values
   ('wa_bv_inicio',     '08:00', 'Boas-vindas no privado: a partir de'),
   ('wa_bv_fim',        '21:00', 'Boas-vindas no privado: até')
 on conflict (chave) do nothing;
+
+-- Certificado: de R$ 47,70 por R$ 19,70 nas primeiras 24 h (só Pix) e última chance de 10 min pela Bia
+alter table sdb_leads add column if not exists cert_valor numeric(10,2);
+alter table sdb_leads add column if not exists cert_expira_em timestamptz;   -- Pix promocional: excluído no Asaas depois disso
+alter table sdb_leads add column if not exists cert_criado_em timestamptz;
+create index if not exists sdb_leads_cert_expira_idx on sdb_leads (cert_status, cert_expira_em);
+insert into sdb_config (chave, valor, descricao) values
+  ('cert_preco_cheio', '47.70', 'Preço cheio do certificado (riscado durante a promoção)'),
+  ('cert_promo_horas', '24',    'Horas de preço promocional depois do cadastro'),
+  ('cert_ultima_min',  '10',    'Minutos da última chance (link da Bia)')
+on conflict (chave) do nothing;
