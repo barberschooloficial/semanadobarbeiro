@@ -27,11 +27,25 @@ module.exports = handler(['POST'], async (req, res) => {
   let lead = await db.one('sdb_leads', `whatsapp=eq.${whatsapp}&select=*`) || await db.one('sdb_leads', `email=eq.${encodeURIComponent(email)}&select=*`);
   let novo = false;
   if (lead) {
+    // WhatsApp E e-mail iguais ao cadastro = a própria pessoa. Só um deles bate = pode ser outra pessoa digitando o número de alguém.
+    const mesmo = lead.whatsapp === whatsapp && lead.email === email;
     // Quem já passou por uma Semana não entra numa turma nova
     const j = janela(turmaDo(lead, cfg), cfg);
     if (t > j.fim) {
       await logEvento('cadastro_repetido', { lead_id: lead.id, payload: { utm_source: utm('utm_source'), utm_campaign: utm('utm_campaign') } });
-      return send(res, 200, { ok: false, ja_participou: true, nome: lead.nome.split(' ')[0], comprou: lead.curso_status === 'pago', curso_url: cfg.curso_site_url || 'https://www.barberschool.com.br' });
+      return send(res, 200, { ok: false, ja_participou: true, nome: mesmo ? lead.nome.split(' ')[0] : null, comprou: mesmo && lead.curso_status === 'pago', curso_url: cfg.curso_site_url || 'https://www.barberschool.com.br' });
+    }
+    if (!mesmo) {
+      // Não entrega o acesso aqui (quem soubesse o WhatsApp de alguém entraria na conta dele).
+      // Manda o link para o e-mail do cadastro, no máximo uma vez a cada 15 minutos.
+      const desde = new Date(Date.now() - 15 * 60e3).toISOString();
+      const recente = await db.one('sdb_eventos', `select=id&tipo=eq.acesso_reenviado&lead_id=eq.${lead.id}&created_at=gte.${encodeURIComponent(desde)}`).catch(() => null);
+      if (!recente) {
+        await logEvento('acesso_reenviado', { lead_id: lead.id, payload: { por: lead.whatsapp === whatsapp ? 'whatsapp' : 'email' } });
+        await comTimeout(require('./_lib/boasvindas').enviar(lead, cfg), 5000);
+      }
+      const [u, dom] = String(lead.email || '').split('@');
+      return send(res, 200, { ok: true, ja_inscrito: true, email_mascara: u && dom ? `${u.slice(0, 2)}${'*'.repeat(Math.max(2, u.length - 2))}@${dom}` : null });
     }
     // Já cadastrado na turma atual ou na próxima: mantém os dados originais (não deixa terceiros trocarem nome/e-mail)
     if (!lead.lgpd_consent) [lead] = await db.update('sdb_leads', `id=eq.${lead.id}`, { lgpd_consent: true });
@@ -54,6 +68,9 @@ module.exports = handler(['POST'], async (req, res) => {
     await logEvento('cadastro', { lead_id: lead.id, payload: { origem: lead.origem, utm_source: lead.utm_source, utm_campaign: lead.utm_campaign, turma: lead.turma_inicio } });
     // E-mail de boas-vindas (biblioteca: api/_lib/copies.js → email_boas_vindas). Se falhar, o agendador reenvia.
     await comTimeout(require('./_lib/boasvindas').enviar(lead, cfg), 5000);
+    // Meta (API de Conversões): mesmo event_id do Pixel do navegador, a Meta conta uma vez só
+    const eid = /^[\w.-]{8,80}$/.test(String(b.evento_id || '')) ? String(b.evento_id) : `lead_${lead.id}`;
+    await comTimeout(require('./_lib/meta').evento('Lead', { lead, req, eventId: eid, fbp: b.fbp, fbc: b.fbc, url: `${SITE_URL()}/` }), 3000);
   }
 
   send(res, 200, { ok: true, token: lead.token, app_link, novo, turma: turmaDo(lead, cfg) });

@@ -250,12 +250,17 @@ async function processar(limiteMs = 40000) {
   return resumo;
 }
 
-function paginaSaida(ok) {
-  return `<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Semana do Barbeiro</title>
+function paginaSaida(ok, confirmar) {
+  const titulo = confirmar ? 'Sair da lista?' : ok ? 'Pronto' : 'Link inválido';
+  const texto = confirmar ? 'Confirme abaixo para não receber mais e-mails da Semana do Barbeiro. Suas aulas continuam liberadas no app.'
+    : ok ? 'Você não vai mais receber e-mails da Semana do Barbeiro. Suas aulas continuam liberadas no app.' : 'Não encontramos este cadastro.';
+  // O botão faz POST no mesmo endereço: robôs de antivírus que abrem links do e-mail (GET) não descadastram ninguém
+  const botao = confirmar ? '<form method="post" style="margin:18px 0 0"><button type="submit" style="font:700 16px Arial,sans-serif;background:#15120e;color:#fffdf8;border:0;border-radius:10px;padding:14px 22px;cursor:pointer">Não quero mais receber e-mails</button></form>' : '';
+  return `<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Semana do Barbeiro</title>
 <body style="margin:0;background:#ede7dc;font:16px/1.6 Arial,sans-serif;color:#15120e;display:grid;place-items:center;min-height:100vh;padding:24px;box-sizing:border-box">
 <div style="max-width:420px;background:#fffdf8;border:1px solid #d9cfbe;border-radius:12px;padding:28px;text-align:center">
-<h1 style="font:400 28px Impact,'Arial Narrow',sans-serif;text-transform:uppercase;margin:0 0 8px">${ok ? 'Pronto' : 'Link inválido'}</h1>
-<p style="margin:0">${ok ? 'Você não vai mais receber e-mails da Semana do Barbeiro. Suas aulas continuam liberadas no app.' : 'Não encontramos este cadastro.'}</p></div></body></html>`;
+<h1 style="font:400 28px Impact,'Arial Narrow',sans-serif;text-transform:uppercase;margin:0 0 8px">${titulo}</h1>
+<p style="margin:0">${texto}</p>${botao}</div></body></html>`;
 }
 
 module.exports = handler(['GET', 'POST'], async (req, res) => {
@@ -266,6 +271,12 @@ module.exports = handler(['GET', 'POST'], async (req, res) => {
   if (acao === 'descadastro') {
     const t = u.searchParams.get('t') || '', ct = u.searchParams.get('c') || '';
     let ok = false;
+    if (req.method === 'GET') {
+      // Só mostra a confirmação (POST de um clique do Gmail/Outlook e o botão da página é que descadastram)
+      const valido = /^[a-f0-9]{16,40}$/.test(ct) || TOKEN.test(t);
+      res.statusCode = valido ? 200 : 404; res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.setHeader('Cache-Control', 'no-store');
+      return res.end(paginaSaida(false, valido));
+    }
     if (/^[a-f0-9]{16,40}$/.test(ct)) {
       const c = await db.one('sdb_contatos', `select=id&token=eq.${ct}`);
       if (c) { await db.update('sdb_contatos', `id=eq.${c.id}`, { email_optout: true }); ok = true; }

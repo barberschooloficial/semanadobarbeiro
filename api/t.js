@@ -58,7 +58,7 @@ async function contatoGet(req, res) {
 const TIPOS = new Set([
   'visita', 'cta_clique', 'quiz_inicio', 'cert_pix', 'cert_cartao', 'whatsapp_clique', 'instagram_clique',
   'app_aberto', 'roleta_vista', 'aula_play', 'oferta_vista', 'checkout_clique', 'saiba_mais_clique',
-  'live_clique', 'grupo_clique', 'barberhub_vista', 'barberhub_clique', 'ja_participou',
+  'live_clique', 'grupo_clique', 'barberhub_vista', 'barberhub_clique', 'ja_participou', 'ja_inscrito', 'barberschool_clique', 'premio_clique',
 ]);
 const corta = (v, n = 120) => (v == null ? null : String(v).replace(/[\u0000-\u001f]/g, '').slice(0, n) || null);
 

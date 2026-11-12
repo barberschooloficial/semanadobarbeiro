@@ -45,6 +45,8 @@ module.exports = handler(['GET'], async (req, res) => {
       u.searchParams.set('name', lead.nome);
       u.searchParams.set('email', lead.email);
       u.searchParams.set('sck', sck);
+      // src: origem da venda no relatório da Hotmart (campanha que trouxe a pessoa para a Semana)
+      if (!u.searchParams.has('src')) u.searchParams.set('src', `sdb_${String(lead.utm_campaign || lead.utm_source || 'organico').toLowerCase().replace(/[^a-z0-9]+/g, '_').slice(0, 40)}`);
       if (roleta[4]?.premio?.cupom) u.searchParams.set('offDiscount', roleta[4].premio.cupom); // cupom do 4º dia já aplicado
       return u.toString();
     } catch { return null; }
