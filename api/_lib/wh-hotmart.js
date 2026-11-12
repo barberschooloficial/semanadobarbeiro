@@ -57,5 +57,7 @@ module.exports = handler(['GET', 'POST'], async (req, res) => {
     ...(status === 'pago' ? { curso_paid_at: new Date().toISOString() } : {}),
   });
   if (status === 'pago') await comTimeout(manychat.sync(lead, { tags: ['sdb_comprou_curso'] }), 4000);
+  // Compra do curso na Meta pelo servidor: só com META_CAPI_HOTMART=1 (se o Pixel já estiver configurado no produto da Hotmart, deixe desligado para não contar 2 vezes)
+  if (status === 'pago' && process.env.META_CAPI_HOTMART === '1') await comTimeout(require('./meta').evento('Purchase', { lead, eventId: `curso_${transacao}`, valor: d.purchase?.price?.value }), 3000);
   send(res, 200, { ok: true });
 });

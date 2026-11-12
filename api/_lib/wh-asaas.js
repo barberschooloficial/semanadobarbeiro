@@ -6,6 +6,7 @@ const { db, logEvento } = require('./db');
 const { readJson, send, handler } = require('./http');
 const manychat = require('./manychat');
 const { comTimeout } = require('./util');
+const meta = require('./meta');
 
 const PAGO = ['PAYMENT_CONFIRMED', 'PAYMENT_RECEIVED'];
 const ESTORNO = ['PAYMENT_REFUNDED', 'PAYMENT_CHARGEBACK_REQUESTED', 'PAYMENT_DELETED'];
@@ -51,9 +52,11 @@ module.exports = handler(['GET', 'POST'], async (req, res) => {
   if (produto === 'cert') {
     await db.update('sdb_leads', `id=eq.${lead.id}`, pago ? { cert_status: 'pago', cert_paid_at: agora } : { cert_status: 'cancelado' });
     if (pago) await comTimeout(manychat.sync(lead, { tags: ['sdb_cert_pago'] }), 4000);
+    if (pago) await comTimeout(meta.evento('Purchase', { lead, eventId: `cert_${lead.id}`, valor: p.value, url: `${require('./http').SITE_URL()}/certificado` }), 3000);
   } else {
     await db.update('sdb_leads', `id=eq.${lead.id}`, pago ? { barberhub_status: 'pago', barberhub_paid_at: agora } : { barberhub_status: 'cancelado' });
     if (pago) await comTimeout(manychat.sync(lead, { tags: ['sdb_barberhub_pago'] }), 4000);
+    if (pago) await comTimeout(meta.evento('Purchase', { lead, eventId: `barbeearia_${p.id}`, valor: p.value, url: `${require('./http').APP_URL()}/barberhub` }), 3000);
   }
   send(res, 200, { ok: true });
 });
