@@ -141,6 +141,7 @@
     const body = {
       nome: form.nome.value, whatsapp: form.whatsapp.value, email: form.email.value,
       lgpd: document.getElementById('lgpd').checked, site: form.site.value, contato: store.get('sdb_contato') || undefined,
+      evento_id: 'lead_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8), ...sdb.cookieMeta(),
     };
     ['utm_source','utm_medium','utm_campaign','utm_content','origem'].forEach(k => body[k] = store.get('sdb_' + k) || undefined);
     if (!body.lgpd) { erro.textContent = 'Marque a autorização para receber as aulas.'; return; }
@@ -155,9 +156,18 @@
           <a class="btn green" data-track="saiba_mais_clique" data-track-detalhe="repetente" href="${sdb.esc(r.curso_url)}" target="_blank" rel="noopener">${r.comprou ? 'Ir para o curso' : 'Conhecer o curso completo'}</a>`;
         return;
       }
+      if (r.ja_inscrito) {
+        sdb.track('ja_inscrito');
+        document.getElementById('cadastro').innerHTML = `<div class="ficha-topo"><span>Você já está inscrito</span><span>Barber School</span></div>
+          <h3>Sua vaga já está garantida</h3>
+          <p class="muted">Esse WhatsApp ou e-mail já tem cadastro nesta turma. Por segurança, mandamos o link de acesso para o e-mail do cadastro${r.email_mascara ? ` (<b>${sdb.esc(r.email_mascara)}</b>)` : ''}. Confira também a caixa de spam.</p>
+          <a class="btn green" href="${sdb.esc((sdb.C.APP_URL || 'https://app.semanadobarbeiro.com.br') + '/')}">Entrar no app com WhatsApp e e-mail</a>
+          <a class="btn" data-track="whatsapp_clique" data-track-detalhe="ja_inscrito" href="/suporte" target="_blank" rel="noopener" style="margin-top:10px">Não recebi: falar com o suporte</a>`;
+        return;
+      }
       store.set('sdb_token', r.token);
       store.set('sdb_app_link', r.app_link);
-      pixel('Lead', { content_name: 'Semana do Barbeiro' });
+      if (r.novo) pixel('Lead', { content_name: 'Semana do Barbeiro' }, body.evento_id); // mesmo id da API de Conversões
       sdb.ir('/quiz?t=' + r.token);
     } catch (err) {
       erro.textContent = err.message; btn.disabled = false; btn.textContent = 'Quero minhas aulas grátis';

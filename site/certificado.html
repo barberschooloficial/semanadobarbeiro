@@ -100,7 +100,8 @@
       if (ocupado) return; ocupado = true;
       try { const s = await api('certificado?t=' + t); if (s.status === 'pago') { clearInterval(checar); sdb.ir('/obrigado?t=' + t + '&pago=1'); } } catch {} finally { ocupado = false; }
     };
-    const checar = setInterval(conferir, 3000);
+    const inicio = Date.now(); // confere a cada 4 s com a tela aberta, por até 20 min (depois só ao voltar para a aba)
+    const checar = setInterval(() => { if (!document.hidden && Date.now() - inicio < 20 * 60e3) conferir(); }, 4000);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) conferir(); }); // voltou do app do banco
   }
   const btn = document.getElementById('btn'), erro = document.getElementById('erro');
