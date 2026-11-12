@@ -738,7 +738,7 @@
         </dl></div>
         <div class="card"><h4>Respostas da enquete</h4>${d.quiz ? `<dl class="dl">${d.quiz.map(r => `<dt>${esc(r.p)}</dt><dd>${esc(r.r)}</dd>`).join('')}</dl>` : '<p class="muted small" style="margin:0">Não respondeu.</p>'}</div>
         <div class="card"><h4>Compras</h4><dl class="dl">
-          <dt>Certificado</dt><dd>${ST[a.cert_status] || '—'}${a.cert_paid_at ? ` · ${dataBR(a.cert_paid_at, true)}` : ''}</dd>
+          <dt>Certificado</dt><dd>${ST[a.cert_status] || '—'}${a.cert_status ? ` · ${({ PIX: 'Pix', CREDIT_CARD: 'cartão', BOLETO: 'boleto', UNDEFINED: 'cliente ainda não escolheu' })[a.cert_forma] || 'forma não registrada'}` : ''}${a.cert_valor ? ` · ${brlA(Number(a.cert_valor))}` : ''}${a.cert_paid_at ? ` · pago ${dataBR(a.cert_paid_at, true)}` : a.cert_criado_em ? ` · gerado ${dataBR(a.cert_criado_em, true)}` : ''}${a.cert_status === 'pendente' && a.cert_expira_em ? ` · vence ${dataBR(a.cert_expira_em, true)}` : ''}</dd>
           <dt>Curso</dt><dd>${ST[a.curso_status] || '—'}${a.curso_paid_at ? ` · ${dataBR(a.curso_paid_at, true)}` : ''}</dd>
           <dt>Barbeearia</dt><dd>${ST[a.barberhub_status] || '—'}${a.barberhub_paid_at ? ` · ${dataBR(a.barberhub_paid_at, true)}` : ''}</dd>
         </dl></div>
