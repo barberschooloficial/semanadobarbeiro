@@ -80,6 +80,12 @@ function varsContato(c, d, ch) {
   const nome = /^barbearias/.test(String(c.lista || '')) ? String(c.nome || 'sua barbearia') : (String(c.nome || '').split(' ')[0] || 'barbeiro'); // barbearia: nome completo da empresa
   return { nome, link, app_link: link, cidade: c.cidade || '' };
 }
+// Dados de exemplo para a prévia e o e-mail de teste (inclui {{link}} dos convites, que antes ficava sem preencher)
+function exemploVars(b = {}) {
+  const barbearia = /^barbearias/.test(String(b.filtro?.lista || b.lista || ''));
+  const link = `${SITE_URL()}/?utm_source=email&utm_medium=teste`;
+  return { nome: barbearia ? 'Barbearia do Rafael' : 'Rafael', link, app_link: `${APP_URL()}/?t=exemplo`, cidade: 'Curitiba' };
+}
 const linkSair = (l) => `${SITE_URL()}/api/disparos?acao=descadastro&t=${l.token}`;
 
 function limpaFiltro(f = {}) {
@@ -498,14 +504,14 @@ module.exports = handler(['GET', 'POST'], async (req, res) => {
   }
 
   if (acao === 'previa') {
-    const v = { nome: 'Rafael', app_link: `${APP_URL()}/?t=exemplo` };
+    const v = exemploVars(b);
     return send(res, 200, { assunto: preencher(b.assunto, v), html: layout({ corpo: corpoHtml(preencher(b.texto, v)), descadastro: '#' }) });
   }
 
   if (acao === 'teste') {
     const para = String(b.para || '').trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(para)) throw fail(400, 'E-mail de teste inválido');
-    const v = { nome: 'Rafael', app_link: `${APP_URL()}/?t=exemplo` };
+    const v = exemploVars(b);
     const r = await enviarLote([{ ref: 'teste', para, assunto: '[TESTE] ' + preencher(b.assunto, v), texto: preencher(b.texto, v), descadastro: `${SITE_URL()}/api/disparos?acao=descadastro&t=exemplo` }]);
     if (r.falhas.length) throw fail(502, r.falhas[0].erro);
     return send(res, 200, { ok: true, simulado: !!r.simulado });
