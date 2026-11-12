@@ -167,6 +167,18 @@ São 10 aulas grátis com o professor Cris Aita, pelo celular, começando na seg
   { id: 'convite_semana_wa', canal: 'whatsapp', publico: 'contatos', link_tipo: 'semana', titulo: 'WhatsApp: convite da Semana (quem abriu ou clicou)', filtro: { eng: 'abriu_ou_clicou' },
     flow_cfg: 'mc_flow_convite', resumo: 'Template de convite da Semana com botão de URL dinâmica usando o campo convite_link.' },
 
+  { id: 'convite_barbearia_maps', canal: 'email', publico: 'contatos', link_tipo: 'semana', titulo: 'Convite para barbearias (lista do Google Maps)', filtro: { lista: 'barbearias_maps', eng: 'nao_convidado' },
+    assunto: 'Aulas grátis de corte para a equipe da {{nome}}',
+    texto: `Olá! Aqui é o professor Cris Aita, criador da Barber School.
+
+Encontrei a {{nome}} no Google e quero fazer um convite para você e para os barbeiros da sua equipe: a **Semana do Barbeiro**, 10 aulas completas do meu curso, de graça, pelo celular.
+
+Tem degradê, Mid Fade, barba passo a passo, Flat Top e progressiva masculina, além de live comigo na segunda e na sexta para tirar dúvidas.
+
+[Quero minha vaga grátis]({{link}})
+
+Se não quiser receber outros convites, é só clicar no link no fim deste e-mail.` },
+
   { id: 'convite_barbeearia_email', canal: 'email', publico: 'contatos', link_tipo: 'barbeearia', titulo: 'Convite Barbeearia: 30 dias do Plus para alunos', filtro: { eng: 'nao_convidado' },
     assunto: '{{nome}}, um presente para os alunos da Barber School',
     texto: `Olá, {{nome}}! Aqui é o professor Cris Aita.

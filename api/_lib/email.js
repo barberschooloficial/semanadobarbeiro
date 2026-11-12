@@ -58,7 +58,7 @@ async function enviarLote(msgs) {
   if (!key) return { ok: [], falhas: msgs.map(m => ({ ref: m.ref, erro: 'RESEND_API_KEY não configurada' })) };
   const from = process.env.EMAIL_FROM || 'Cris Aita | Barber School <aulas@semanadobarbeiro.com.br>';
   const body = msgs.map(m => ({
-    from, to: [m.para], subject: m.assunto,
+    from: m.from || from, to: [m.para], subject: m.assunto,
     html: layout({ corpo: corpoHtml(m.texto), descadastro: m.descadastro, preheader: m.preheader, pixel: m.pixel }),
     text: textoPuro(m.texto, m.descadastro),
     reply_to: process.env.EMAIL_REPLY_TO || undefined,
