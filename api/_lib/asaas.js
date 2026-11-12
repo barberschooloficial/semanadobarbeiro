@@ -39,14 +39,20 @@ function hojeMais(dias) {
 // Cobrança avulsa: Pix, boleto ou cartão (o cliente escolhe na fatura)
 async function cobranca({ lead, cpf, valor, descricao, referencia, successUrl }) {
   const customer = await garanteCliente(lead, cpf);
-  const p = await asaas('/payments', {
-    method: 'POST',
-    body: {
-      customer, billingType: 'UNDEFINED', value: Number(valor), dueDate: hojeMais(1),
-      description: descricao, externalReference: referencia,
-      callback: successUrl ? { successUrl, autoRedirect: true } : undefined,
-    },
-  });
+  const corpo = {
+    customer, billingType: 'UNDEFINED', value: Number(valor), dueDate: hojeMais(1),
+    description: descricao, externalReference: referencia,
+    callback: successUrl ? { successUrl, autoRedirect: true } : undefined,
+  };
+  let p;
+  try { p = await asaas('/payments', { method: 'POST', body: corpo }); }
+  catch (e) {
+    // O Asaas só aceita a volta automática para o site se o domínio estiver cadastrado em Minha Conta → Informações.
+    // Sem isso, cobra do mesmo jeito (o webhook confirma o pagamento), só não redireciona sozinho no fim.
+    if (!corpo.callback || !/dom[ií]nio/i.test(e.message)) throw e;
+    console.warn('asaas: domínio não cadastrado, cobrança sem redirecionamento');
+    p = await asaas('/payments', { method: 'POST', body: { ...corpo, callback: undefined } });
+  }
   return { id: p.id, invoiceUrl: p.invoiceUrl };
 }
 
