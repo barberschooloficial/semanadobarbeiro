@@ -16,16 +16,28 @@ const MODULOS = [
 
 const COPIES = [
   { id: 'email_boas_vindas', canal: 'email', titulo: 'Logo após o cadastro (automático)', automatico: true,
-    assunto: 'Sua vaga está confirmada, {{nome}}',
-    texto: `Olá, {{nome}}! Sou o professor Cris Aita, criador da Barber School.
+    assunto: 'Sua vaga está confirmada, {{nome}}: veja como acessar as aulas',
+    texto: `Olá, {{nome}}! Aqui é o professor Cris Aita, criador da Barber School.
 
-Obrigado pelo seu cadastro na Semana do Barbeiro. Você vai receber 10 aulas completas do meu curso, de graça: um módulo por dia, às 8h.
+Sua vaga na **Semana do Barbeiro** está confirmada. São 10 aulas completas do meu curso, de graça: um módulo por dia, direto no celular.
 
-Seu acesso pessoal é este (guarde!):
+**Seu acesso às aulas**
+Toque no botão abaixo. Se pedir login, entre com o WhatsApp **{{whatsapp}}** e o e-mail **{{email}}**, os mesmos do cadastro.
 
 [Abrir minhas aulas]({{app_link}})
 
-Sou cabeleireiro formado desde 1995 e barbeiro realizado com a profissão. Fiz cursos no exterior porque aprendi cedo que o conhecimento é o que diferencia o profissional. Depois descobri minha segunda paixão: ensinar.
+**Cronograma da sua turma**
+{{cronograma}}
+
+As aulas ficam no ar até {{fim}}, às 23h59. Antes da primeira aula de cada dia você gira a roleta e pode ganhar prêmios.
+
+**Lives comigo no Instagram:** {{lives}}, no @barberschooloficial. Traga suas dúvidas!
+
+**Entre no grupo de avisos da turma**
+É por lá que eu aviso cada módulo liberado:
+[Entrar no grupo do WhatsApp]({{grupo_link}})
+
+**Precisa de ajuda?** Fale com o nosso suporte no WhatsApp: {{suporte_link}}
 
 Um conselho que eu sempre dou: **não parem de buscar evoluir, nunca!**` },
 

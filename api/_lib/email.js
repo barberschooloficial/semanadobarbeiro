@@ -37,7 +37,7 @@ function layout({ corpo, descadastro, preheader, pixel }) {
 <tr><td style="background:#15120e;padding:18px 26px;font:400 22px Impact,'Arial Narrow',sans-serif;letter-spacing:1px;text-transform:uppercase;color:#fff">Semana do Barbeiro <span style="font:700 11px Arial,sans-serif;letter-spacing:3px;color:#e8d9b8">· BARBER SCHOOL</span></td></tr>
 <tr><td style="padding:28px 26px 10px;font:16px/1.6 Arial,Helvetica,sans-serif;color:#2a241d">${corpo}</td></tr>
 <tr><td style="padding:0 26px 26px;font:15px/1.5 Arial,sans-serif;color:#3b342b;border-top:0">
-<p style="margin:8px 0 0"><b>Cris Aita</b><br><span style="color:#6f6556">Professor e fundador da Barber School</span></p></td></tr>
+<p style="margin:8px 0 0"><b>Cris Aita e Luciano Leal</b><br><span style="color:#6f6556">Barber School</span><br><a href="https://www.barberschool.com.br" style="color:#8a6730">www.barberschool.com.br</a></p></td></tr>
 <tr><td style="background:#f6f2ea;padding:16px 26px;font:12px/1.5 Arial,sans-serif;color:#6f6556;border-top:1px solid #d9cfbe">
 Você recebe este e-mail porque se cadastrou na Semana do Barbeiro. <a href="${esc(descadastro)}" style="color:#6f6556">Não quero mais receber e-mails</a>.</td></tr>
 </table></td></tr></table>${pixel ? `<img src="${esc(pixel)}" width="1" height="1" alt="" style="display:block;border:0">` : ''}</body></html>`;
@@ -45,7 +45,7 @@ Você recebe este e-mail porque se cadastrou na Semana do Barbeiro. <a href="${e
 
 function textoPuro(texto, descadastro) {
   return String(texto || '').replace(/\*\*(.+?)\*\*/g, '$1').replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g, '$1: $2')
-    + `\n\nCris Aita\nProfessor e fundador da Barber School\n\nPara não receber mais e-mails: ${descadastro}`;
+    + `\n\nCris Aita e Luciano Leal\nBarber School\nwww.barberschool.com.br\n\nPara não receber mais e-mails: ${descadastro}`;
 }
 
 const simulado = () => !process.env.RESEND_API_KEY && process.env.SDB_LOCAL === '1';
