@@ -34,7 +34,10 @@ const CAMPOS_CFG = [
     { chave: 'curso_site_url', rotulo: 'Site do curso', tipo: 'url', ajuda: 'Para onde vai quem já fez uma Semana e tenta se cadastrar de novo.' },
   ] },
   { titulo: 'Certificado e Barbeearia', campos: [
-    { chave: 'cert_preco', rotulo: 'Preço do certificado (R$)', tipo: 'num' },
+    { chave: 'cert_preco', rotulo: 'Preço promocional do certificado (R$)', tipo: 'num', ajuda: 'Vale nas primeiras horas depois do cadastro (abaixo) e na última chance mandada pela Bia. Só no Pix.' },
+    { chave: 'cert_preco_cheio', rotulo: 'Preço cheio do certificado (R$)', tipo: 'num', ajuda: 'Aparece riscado ("de") durante a promoção e vale depois dela. Igual ao promocional desliga a promoção.' },
+    { chave: 'cert_promo_horas', rotulo: 'Horas de preço promocional depois do cadastro', tipo: 'int' },
+    { chave: 'cert_ultima_min', rotulo: 'Minutos da última chance (link da Bia)', tipo: 'int' },
     { chave: 'barberhub_preco', rotulo: 'Preço da Barbeearia no app (R$)', tipo: 'num' },
     { chave: 'barberhub_ciclo', rotulo: 'Cobrança da Barbeearia', tipo: 'sel', opcoes: [['MONTHLY', 'Assinatura mensal'], ['UNICO', 'Pagamento único']] },
     { chave: 'barbeearia_convite_url', rotulo: 'Link do convite de 30 dias da Barbeearia', tipo: 'url' },
@@ -174,6 +177,7 @@ async function processar(limiteMs = 40000) {
   if (cfg0.grupos_auto !== '0') await G.garantirCalendario(segundaDa(agora())).catch(e => console.error('grupos', e.message));
   await require('./_lib/boasvindas').pendentes().catch(e => console.error('boas-vindas', e.message));
   await require('./_lib/prospeccao').passo().catch(e => console.error('prospeccao', e.message));
+  await require('./_lib/cert-conferir').expirarVencidos().catch(e => console.error('cert expirar', e.message));
   await require('./_lib/cert-conferir').conferirPendentes().catch(e => console.error('cert', e.message));
   const t0 = Date.now();
   const resumo = [];

@@ -5,10 +5,13 @@ const { primeiroNome } = require('./_lib/valida');
 const { agora: relogio } = require('./_lib/util');
 const { premio } = require('./_lib/premios');
 const { turmaDo, janela, textoLives } = require('./_lib/turma');
+const { precoCert, abrirUltima, publico } = require('./_lib/cert-preco');
 
 module.exports = handler(['GET'], async (req, res) => {
   const lead = await leadByToken(bearer(req));
   if (!lead) throw fail(401, 'Acesso não encontrado.');
+  // Link da última chance (mandado pela Bia): abrir começa a contar os 10 min do preço promocional
+  if (new URL(req.url, 'http://x').searchParams.get('oferta') === '1' && lead.cert_status !== 'pago') await abrirUltima(lead).catch(() => {});
 
   const [cfg, aulas, prog, giros] = await Promise.all([
     config(),
@@ -52,6 +55,7 @@ module.exports = handler(['GET'], async (req, res) => {
     } catch { return null; }
   })();
 
+  const precoPub = publico(await precoCert(lead, cfg));
   const total = lista.length, assistidas = lista.filter(a => a.assistida).length;
 
   await db.update('sdb_leads', `id=eq.${lead.id}`, { last_seen_at: new Date().toISOString() }).catch(() => {});
@@ -69,7 +73,7 @@ module.exports = handler(['GET'], async (req, res) => {
       parcelas: cfg.curso_parcelas, checkout: ofertaAberta ? checkout : null,
     },
     certificado: {
-      status: lead.cert_status, preco: cfg.cert_preco,
+      status: lead.cert_status, ...(() => { const p = precoPub; return { preco: p.valor, preco_cheio: p.cheio, promo: p.promo, promo_fase: p.fase, promo_ate: p.ate }; })(), expira: lead.cert_status === 'pendente' ? lead.cert_expira_em || null : null,
       invoice_url: lead.cert_status === 'pendente' ? lead.cert_invoice_url : null,
       liberado: lead.cert_status === 'pago' && assistidas >= total && total > 0,
     },

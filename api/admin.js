@@ -43,7 +43,7 @@ module.exports = handler(['GET'], async (req, res) => {
     const turma = /^\d{4}-\d{2}-\d{2}$/.test(u.searchParams.get('turma') || '') ? u.searchParams.get('turma') : '';
     const campanha = (u.searchParams.get('campanha') || '').slice(0, 100);
     const [leadsTodos, prog, trilha, aulas] = await Promise.all([
-      todos('sdb_leads', 'select=id,perfil,turma_inicio,utm_source,utm_medium,utm_campaign,quiz_at,last_seen_at,cert_status,curso_status,barberhub_status,created_at&order=created_at.asc'),
+      todos('sdb_leads', 'select=id,perfil,turma_inicio,utm_source,utm_medium,utm_campaign,quiz_at,last_seen_at,cert_status,cert_valor,curso_status,barberhub_status,created_at&order=created_at.asc'),
       todos('sdb_progresso', 'select=lead_id,aula_id'),
       todos('sdb_trilha', 'select=sessao,lead_id,tipo,pagina,utm_source,utm_campaign,created_at&tipo=in.(visita,oferta_vista,checkout_clique)&order=id.asc'),
       db.select('sdb_aulas', 'select=id,ordem,titulo&ativo=eq.true&order=ordem.asc'),
@@ -73,7 +73,7 @@ module.exports = handler(['GET'], async (req, res) => {
       ['Compraram o curso', n(l => l.curso_status === 'pago')],
     ].map(([nome, v]) => ({ nome, v }));
     const preco = { cert: Number(cfg.cert_preco || 19.7), curso: Number(cfg.curso_preco_por || 147), hub: Number(cfg.barberhub_preco || 0) };
-    const receitaDe = (L) => L.filter(l => l.cert_status === 'pago').length * preco.cert + L.filter(l => l.curso_status === 'pago').length * preco.curso + L.filter(l => l.barberhub_status === 'pago').length * preco.hub;
+    const receitaDe = (L) => L.filter(l => l.cert_status === 'pago').reduce((s, l) => s + (Number(l.cert_valor) || preco.cert), 0) + L.filter(l => l.curso_status === 'pago').length * preco.curso + L.filter(l => l.barberhub_status === 'pago').length * preco.hub;
     // Campanhas (sempre dentro do filtro de turma)
     const baseTurma = leadsTodos.filter(l => !turma || l.turma === turma);
     const vTurma = trilha.filter(t => t.tipo === 'visita' && String(t.pagina || '').startsWith('site/') && Date.parse(t.created_at) >= capIni && Date.parse(t.created_at) < capFim);
