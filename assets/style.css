@@ -499,3 +499,6 @@ footer { border-top: 1px solid #2c251d; }
 .pix .cupom code { display: block; font: 600 .72rem/1.45 ui-monospace, Menlo, monospace; letter-spacing: 0; padding: 10px 12px; background: #fff; border: 1.5px dashed var(--bronze); border-radius: 8px; max-height: 76px; overflow: auto; word-break: break-all; text-align: left; }
 .pix .cupom .btn { width: 100%; }
 .pix-cab { flex-wrap: wrap; }
+
+.resumo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+.resumo-grid .rotulo { display: block; margin-bottom: 4px; }
