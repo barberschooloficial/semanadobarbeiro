@@ -63,7 +63,10 @@
 
   // Meta Pixel opcional
   function pixel(ev, params, eventID) {
-    if (!C.PIXEL_ID || /^\/admin/.test(location.pathname)) return; // painel não entra na medição
+    if (/^\/admin/.test(location.pathname)) return; // painel não entra na medição
+    // Tag Manager: o mesmo evento vai para o dataLayer (ex.: sdb_Lead, sdb_InitiateCheckout), com o mesmo event_id
+    if (ev && window.dataLayer) window.dataLayer.push({ event: 'sdb_' + ev, sdb_event_id: eventID || null, ...(params || {}) });
+    if (!C.PIXEL_ID) return;
     if (!window.fbq) {
       !function (f, b, e, v, n, t, s) { if (f.fbq) return; n = f.fbq = function () { n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments) }; if (!f._fbq) f._fbq = n; n.push = n; n.loaded = !0; n.version = '2.0'; n.queue = []; t = b.createElement(e); t.async = !0; t.src = v; s = b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t, s) }(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
       fbq('init', C.PIXEL_ID); fbq('track', 'PageView');
@@ -129,6 +132,7 @@
   function track(tipo, detalhe) {
     try {
       if (document.getElementById('kpis')) return; // painel admin não entra no rastreio
+      if (window.dataLayer) window.dataLayer.push({ event: 'sdb_' + tipo, sdb_detalhe: detalhe || null }); // Tag Manager (ex.: sdb_cta_clique)
       const area = document.getElementById('modAulas') || document.getElementById('fLogin') ? 'app' : 'site';
       const corpo = { tipo, sessao: sessao(), pagina: area + caminho(), detalhe: detalhe || null, token: store.get('sdb_token'), ref: document.referrer ? new URL(document.referrer).host : null };
       UTM.forEach(k => { corpo[k] = qs(k) || store.get('sdb_' + k); });
