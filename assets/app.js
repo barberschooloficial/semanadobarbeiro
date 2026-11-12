@@ -540,13 +540,18 @@
     };
     sdb.track('cert_pix', 'app');
     pararPix();
-    pixTimer = setInterval(async () => {
-      if (document.hidden) return;
+    let conferindo = false;
+    const conferir = async () => {
+      if (conferindo || !pixTimer) return; conferindo = true;
       try {
         const s = await api('certificado?t=' + T);
-        if (s.status === 'pago') { pararPix(); $('mCpf').classList.remove('on'); toast('Pagamento recebido! Certificado pago ✓', 6000); carregar(); }
-      } catch {}
-    }, 5000);
+        if (s.status === 'pago') { pararPix(); document.removeEventListener('visibilitychange', aoVoltar); $('mCpf').classList.remove('on'); toast('Pagamento recebido! Certificado pago ✓', 6000); carregar(); }
+      } catch {} finally { conferindo = false; }
+    };
+    // volta do app do banco: confere na hora, sem esperar o próximo ciclo
+    const aoVoltar = () => { if (!document.hidden) conferir(); };
+    document.addEventListener('visibilitychange', aoVoltar);
+    pixTimer = setInterval(() => { if (!document.hidden) conferir(); }, 3000);
   }
   async function cobrarCert(body) {
     $('cpfErro').textContent = ''; $('cpfBtn').disabled = true;
