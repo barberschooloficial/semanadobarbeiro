@@ -209,7 +209,7 @@ async function processar(limiteMs = 40000) {
     if (d.status === 'agendado') patch0.total = publico.length;
     await db.update('sdb_disparos', `id=eq.${d.id}`, patch0);
     const vars = (x, ch) => ehC ? varsContato(x, d, ch) : varsDe(x);
-    const linha = (id, ok, er) => ({ disparo_id: d.id, [COL]: id, status: ok ? 'enviado' : 'falha', erro: ok ? null : String(er).slice(0, 200) });
+    const linha = (id, ok, er, rid) => ({ disparo_id: d.id, [COL]: id, status: ok ? 'enviado' : 'falha', erro: ok ? null : String(er).slice(0, 200), ...(rid ? { resend_id: rid } : {}) });
 
     // Convites para listas frias: aquecimento do domínio (começa pequeno e dobra a cada dia, até o teto diário)
     // (espalha ao longo do dia: no máximo 30 convites a cada 5 minutos)
@@ -224,7 +224,7 @@ async function processar(limiteMs = 40000) {
           pixel: ehC ? `${SITE_URL()}/api/t?o=${l.token}` : null,
           from: ehC && /^barbearias/.test(String(l.lista || '')) && process.env.EMAIL_FROM_CONVITE ? process.env.EMAIL_FROM_CONVITE : undefined,
         })));
-        const linhas = [...r.ok.map(id => linha(id, true)), ...r.falhas.map(f => linha(f.ref, false, f.erro))];
+        const linhas = [...r.ok.map(id => linha(id, true, null, r.ids?.[id])), ...r.falhas.map(f => linha(f.ref, false, f.erro))];
         if (linhas.length) await db.insert(T_ENV, linhas);
         enviados += r.ok.length; falhas += r.falhas.length;
         if (r.parar) { erro = r.falhas[0]?.erro || 'Resend recusou'; break; }
@@ -353,7 +353,8 @@ module.exports = handler(['GET', 'POST'], async (req, res) => {
       { nome: 'EMAIL_FROM_CONVITE', rotulo: 'Remetente dos convites frios', ok: tem('EMAIL_FROM_CONVITE'), obs: 'opcional: um domínio só de convites protege o domínio das aulas' },
       { nome: 'SUPABASE_SERVICE_ROLE_KEY', rotulo: 'Supabase (banco)', ok: tem('SUPABASE_SERVICE_ROLE_KEY'), obs: 'banco de dados' },
     ];
-    return send(res, 200, { chaves, grupos: CAMPOS_CFG.map(g => ({ titulo: g.titulo, campos: g.campos.map(c => ({ ...c, valor: cfg[c.chave] ?? '' })) })) });
+    const webhooks = { resend: require('./_lib/wh-resend').url(SITE_URL()) }; // só quem passou pela senha do painel vê
+    return send(res, 200, { chaves, webhooks, grupos: CAMPOS_CFG.map(g => ({ titulo: g.titulo, campos: g.campos.map(c => ({ ...c, valor: cfg[c.chave] ?? '' })) })) });
   }
   if (acao === 'prosp_status') return send(res, 200, await require('./_lib/prospeccao').resumo());
   if (acao === 'prosp_rodar') {
@@ -415,8 +416,16 @@ module.exports = handler(['GET', 'POST'], async (req, res) => {
   if (acao === 'contar') {
     const canal = b.canal === 'whatsapp' ? 'whatsapp' : 'email';
     if (b.publico === 'contatos') {
-      const cs = C.filtrar(await C.carregar(db), limpaFiltroC(b.filtro));
-      return send(res, 200, { publico: cs.length, aptos: C.aptos(cs, canal).length });
+      const f = limpaFiltroC(b.filtro);
+      // Régua do bloco: uma consulta só no banco (antes carregava os 33 mil contatos a cada contagem)
+      if (db.rpc) {
+        const r = await db.rpc('sdb_regua_contatos', { p_lista: f.lista || '', p_bloco: f.bloco || '', p_regiao: f.regiao || '', p_eng: f.eng || '', p_canal: canal }).catch(e => { console.error('regua', e.message); return null; });
+        if (r) return send(res, 200, { ...r, regua: true, em: new Date(agora()).toISOString() });
+      }
+      const base = await C.carregar(db), todosC = C.filtrar(base, { ...f, eng: '' }), cs = C.filtrar(base, f);
+      const conta = (fn) => todosC.filter(fn).length;
+      return send(res, 200, { publico: cs.length, aptos: C.aptos(cs, canal).length, total: todosC.length, enviados: conta(c => c.convites > 0), entregues: null, devolvidos: 0,
+        abertos: conta(c => c.aberto_em || c.clicado_em), clicaram: conta(c => c.clicado_em), cadastraram: conta(c => c.lead_id), sairam: conta(c => c.email_optout), regua: true, em: new Date(agora()).toISOString() });
     }
     const lista = filtrar(await carregar(db, cfg), limpaFiltro(b.filtro));
     return send(res, 200, { publico: lista.length, aptos: aptos(lista, canal).length });
