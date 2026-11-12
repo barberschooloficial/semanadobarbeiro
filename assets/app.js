@@ -133,7 +133,7 @@
 
     $('modAulas').innerHTML = '<div class="aulas">' + m.aulas.map(a => `
       <button class="aula-item ${a.assistida ? 'ok' : ''} ${a.id === aulaSel ? 'atual' : ''}" data-aula="${a.id}" type="button">
-        <span class="thumb" style="background-image:url('/assets/img/aula.jpg')"><span class="play"></span></span>
+        <span class="thumb" style="background-image:${capa(a)}"><span class="play"></span></span>
         <span class="corpo">
           <span class="rotulo">${a.id === aulaSel ? 'Assistindo agora' : `Aula ${a.ordem}`}</span>
           <b>${esc(a.titulo)}</b>
@@ -299,7 +299,7 @@
     playerChave = a.id;
     box.innerHTML = `<div class="player">
       <div class="video" id="video">
-        <button class="poster" id="poster" type="button" style="background-image:url('/assets/img/aula.jpg')" aria-label="Assistir à aula ${a.ordem}">
+        <button class="vposter" id="poster" type="button" style="background-image:${capa(a)}" aria-label="Assistir à aula ${a.ordem}">
           <span class="play grande"></span><span class="poster-txt">Toque para assistir</span>
         </button>
       </div>
@@ -438,6 +438,8 @@
     </div>`;
   }
 
+  // Capa da aula: miniatura do próprio vídeo no YouTube (cai na imagem padrão se não houver)
+  const capa = (a) => a && /^[\w-]{6,20}$/.test(a.youtube_id || '') ? `url('https://i.ytimg.com/vi/${a.youtube_id}/hqdefault.jpg'), url('/assets/img/aula.jpg')` : `url('/assets/img/aula.jpg')`;
   let querCert = qs('comprar') === 'certificado';
   function renderCert(s) {
     const c = s.certificado, box = $('certBox');
