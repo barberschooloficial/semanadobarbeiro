@@ -6,8 +6,8 @@ const APP = 'app.semanadobarbeiro.com.br';
 const IG = 'instagram.com/barberschooloficial';
 
 const MODULO = [
-  `☀️ *Bom dia, barbeiros!* São 8h e o *Módulo 1* está liberado: *Equipamentos básicos do barbeiro* e *Tudo sobre pentes*. Gire a roleta e assista agora 👉 ${APP}`,
-  `☀️ *Bom dia, barbeiros!* *Módulo 2* liberado: *Corte Mid Fade com Pompadour* e *Dicas sobre tesouras*. A roleta de hoje já está esperando você 👉 ${APP}`,
+  `☀️ *Bom dia, barbeiros!* São 8h e o *Módulo 1* está liberado: *Corte Mid Fade com Pompadour* e *Dicas sobre tesouras*. Gire a roleta e assista agora 👉 ${APP}`,
+  `☀️ *Bom dia, barbeiros!* *Módulo 2* liberado: *Equipamentos básicos do barbeiro* e *Tudo sobre pentes*. A roleta de hoje já está esperando você 👉 ${APP}`,
   `☀️ *Bom dia!* *Módulo 3* no ar: a dica para *cortar cabelo com muito redemoinho* e o *Corte Razor Part*. 🎡 Gire a roleta antes da primeira aula 👉 ${APP}`,
   `☀️ *Bom dia!* *Módulo 4*: *Barba passo a passo* e *Flat Top com High Fade*. Hoje a roleta está generosa 😉 👉 ${APP}`,
   `☀️ *Último módulo!* *Módulo 5*: *High Fade em "V" atrás* e *Progressiva masculina na barbearia*, o serviço que aumenta o ticket da cadeira. Gire a última roleta da semana 👉 ${APP}`,

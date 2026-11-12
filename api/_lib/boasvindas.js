@@ -8,8 +8,8 @@ const { turmaDo, janela, textoLives } = require('./turma');
 const { agora } = require('./util');
 
 const MODULOS = [
-  'Equipamentos básicos do barbeiro e Tudo sobre pentes',
   'Corte Mid Fade com Pompadour e Dicas sobre tesouras',
+  'Equipamentos básicos do barbeiro e Tudo sobre pentes',
   'Como cortar cabelo com muito redemoinho e Corte Razor Part',
   'Barba passo a passo e Flat Top com High Fade',
   'High Fade em "V" atrás e Progressiva masculina',

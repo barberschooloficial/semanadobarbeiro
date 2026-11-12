@@ -7,8 +7,8 @@
 const BTN = '[Assistir agora]({{app_link}})';
 
 const MODULOS = [
-  ['Módulo 1 liberado: comece pela bancada', 'O que você precisa ter na bancada para começar e qual pente usar em cada etapa do corte.'],
-  ['Módulo 2: Mid Fade com Pompadour', 'O degradê médio passo a passo e as dicas do professor Cris Aita sobre tesouras: como escolher, usar e cuidar.'],
+  ['Módulo 1 liberado: Mid Fade com Pompadour', 'O degradê médio passo a passo e as dicas do professor Cris Aita sobre tesouras: como escolher, usar e cuidar.'],
+  ['Módulo 2: comece pela bancada', 'O que você precisa ter na bancada e qual pente usar em cada etapa do corte.'],
   ['O corte que todo mundo erra (redemoinho)', 'A dica que resolve o redemoinho sem estragar o corte e a risca na navalha com segurança, no Corte Razor Part.'],
   ['Barba passo a passo + Flat Top', 'Preparação, toalha quente, desenho e acabamento da barba. E o Flat Top com High Fade.'],
   ['Último módulo (e uma surpresa)', 'High Fade em "V" atrás e a progressiva masculina, o serviço que aumenta o ticket da cadeira.'],
@@ -43,7 +43,7 @@ Um conselho que eu sempre dou: **não parem de buscar evoluir, nunca!**` },
 
   { id: 'email_vespera', canal: 'email', titulo: 'Véspera (domingo)', quando: { dia: -1, hora: '19:00' }, filtro: {},
     assunto: 'Amanhã às 8h começa',
-    texto: `{{nome}}, amanhã às 8h eu libero o Módulo 1: os equipamentos básicos do barbeiro e tudo sobre pentes.
+    texto: `{{nome}}, amanhã às 8h eu libero o Módulo 1: o Corte Mid Fade com Pompadour e as minhas dicas sobre tesouras.
 
 Antes da primeira aula você gira uma roleta. No primeiro dia todo mundo ganha um prêmio.
 
