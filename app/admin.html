@@ -348,6 +348,11 @@
         <div id="cfgChaves"></div>
         <a class="btn sm" style="margin-top:12px" href="https://vercel.com/barber-school1/semanadobarbeiro/settings/environment-variables" target="_blank" rel="noopener">Abrir chaves na Vercel</a>
       </div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="hist-cab"><h3>Prospecção de barbearias</h3><button class="btn sm" type="button" id="prospRodar">Rodar agora</button></div>
+        <p class="small muted" style="margin:0 0 8px">Todo mês, a Apify busca barbearias no Google Maps nas cidades da lista abaixo, uma por vez, sem passar do teto de gasto. Elas entram na aba Leads, lista <b>barbearias_maps</b>, só para convite por e-mail (WhatsApp frio fica bloqueado).</p>
+        <div id="prospSt" class="small muted">Carregando...</div>
+      </div>
       <div class="cfg-grid" id="cfgGrid"></div>
     </section>
 
@@ -927,7 +932,26 @@
 
 
   // ---------- configurações ----------
+  function pintaProsp(r) {
+    const usd = (n) => 'US$ ' + Number(n || 0).toFixed(2);
+    const e = r.estado || {}, o = r.opcoes || {};
+    const linhas = [];
+    if (!r.token_ok) linhas.push('<b style="color:#b3261e">Falta a chave APIFY_TOKEN na Vercel.</b>');
+    if (r.erro) linhas.push(`<b style="color:#b3261e">${esc(r.erro)}</b>`);
+    linhas.push(`Situação: <b>${o.ativo ? 'ligada' : 'desligada'}</b> · ${o.cidades?.length || 0} cidade(s) · ${o.porCidade} por cidade · teto ${usd(o.teto)}/mês`);
+    if (r.gasto) linhas.push(`Gasto na Apify neste ciclo: <b>${usd(r.gasto.usado)}</b> de ${usd(o.teto)}`);
+    if (e.mes) linhas.push(`Mês ${esc(e.mes)}: ${e.run ? `buscando <b>${esc(e.run.cidade)}</b> agora` : e.parado ? esc(e.parado) : `faltam ${e.fila?.length || 0} cidade(s)`}`);
+    (e.feitos || []).slice(-12).reverse().forEach(f => linhas.push(`✓ ${esc(f.cidade)}: ${f.importados} nova(s), ${f.com_email} com e-mail · ${usd(f.custo)}`));
+    $('prospSt').innerHTML = linhas.join('<br>');
+  }
+  $('prospRodar').onclick = async () => {
+    $('prospRodar').disabled = true;
+    try { const r = await fetchD('prosp_rodar', {}); pintaProsp(r); sdb.toast(r.r?.iniciado ? `Buscando ${r.r.iniciado}...` : r.r?.aguardando ? `Ainda buscando ${r.r.aguardando}` : r.r?.concluido ? `${r.r.concluido.cidade}: ${r.r.concluido.importados} novas` : (r.r?.fim || r.r?.pulado || 'Feito')); }
+    catch (x) { sdb.toast(x.message); } finally { $('prospRodar').disabled = false; }
+  };
+
   async function carregarConfig() {
+    fetchD('prosp_status').then(pintaProsp).catch(x => { $('prospSt').textContent = x.message; });
     const d = await fetchD('config');
     $('cfgGrid').innerHTML = '';
     $('cfgChaves').innerHTML = (d.chaves || []).map(c => `<div style="display:flex;gap:10px;align-items:baseline;padding:7px 0;border-top:1px solid rgba(0,0,0,.07);flex-wrap:wrap"><span class="canal-st ${c.ok ? 'ok' : ''}" style="margin:0"><i></i>${c.ok ? 'gravada' : 'FALTA'}</span><b>${esc(c.rotulo)}</b><code>${esc(c.nome)}</code><span class="small muted">${esc(c.obs)}</span></div>`).join('');
