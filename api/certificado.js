@@ -12,6 +12,16 @@ module.exports = handler(['GET', 'POST'], async (req, res) => {
     const t = new URL(req.url, 'http://x').searchParams.get('t');
     const l = await leadByToken(t);
     if (!l) throw fail(401, 'Cadastro não encontrado.');
+    // Pendente: confere no Asaas (o webhook pode atrasar ou não estar configurado)
+    if (l.cert_status === 'pendente' && l.cert_payment_id) {
+      const s = await comTimeout(asaas.situacao(l.cert_payment_id), 6000).catch(() => null);
+      if (s?.pago) {
+        await db.update('sdb_leads', `id=eq.${l.id}`, { cert_status: 'pago', cert_paid_at: new Date().toISOString() });
+        await logEvento('cert_pago_consulta', { lead_id: l.id, payload: { payment: l.cert_payment_id, status: s.status } }).catch(() => {});
+        await comTimeout(manychat.sync(l, { tags: ['sdb_cert_pago'] }), 4000);
+        return send(res, 200, { status: 'pago' });
+      }
+    }
     return send(res, 200, { status: l.cert_status || null });
   }
   const b = await readJson(req);
