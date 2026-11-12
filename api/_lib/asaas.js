@@ -79,4 +79,11 @@ async function assinatura({ lead, cpf, valor, descricao, referencia }) {
   return { id: s.id, invoiceUrl: first?.invoiceUrl };
 }
 
-module.exports = { pix, cobranca, assinatura };
+// Situação de uma cobrança direto no Asaas (usado enquanto a tela do Pix espera, sem depender do webhook)
+async function situacao(paymentId) {
+  const p = await asaas(`/payments/${encodeURIComponent(paymentId)}`);
+  const s = String(p?.status || '');
+  return { pago: ['RECEIVED', 'CONFIRMED', 'RECEIVED_IN_CASH'].includes(s), cancelado: ['REFUNDED', 'DELETED'].includes(s) || !!p?.deleted, status: s };
+}
+
+module.exports = { pix, cobranca, assinatura, situacao };
