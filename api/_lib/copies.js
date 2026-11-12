@@ -143,41 +143,45 @@ Se você quer ser barbeiro profissional, este é o melhor momento para começar.
     flow_cfg: 'mc_flow_ultima', resumo: 'Template sdb_ultima_chamada.' },
   // ---------- Convites para listas importadas (aba Leads) ----------
   { id: 'convite_semana_email', canal: 'email', publico: 'contatos', link_tipo: 'semana', titulo: 'Convite da Semana (base antiga)', filtro: { eng: 'nao_convidado' },
-    assunto: '{{nome}}, a Semana do Barbeiro voltou (e é grátis)',
-    texto: `Olá, {{nome}}! Aqui é o professor Cris Aita, da Barber School.
+    assunto: '{{nome}}, posso te mandar as aulas?',
+    texto: `Oi, {{nome}}. Aqui é o Cris Aita, da Barber School.
 
-Há uns anos você se cadastrou na Semana do Barbeiro. Ela voltou, de cara nova: 10 aulas completas do meu curso, de graça, um módulo por dia, direto no celular.
+Há um tempo você se inscreveu para aprender a cortar cabelo comigo. Estou abrindo uma turma nova da **Semana do Barbeiro**: 10 aulas do meu curso, sem custo, um módulo por dia no celular.
 
-Toda segunda começa uma turma nova, e tem live comigo na segunda e na sexta, das 19h às 20h.
+Tem degradê, barba passo a passo e acabamento, e live comigo na segunda e na sexta para tirar dúvidas.
 
-[Quero minha vaga grátis]({{link}})
+A turma começa na segunda. Se fizer sentido para você, a inscrição leva 1 minuto:
 
-Se hoje você já corta, as aulas de degradê, barba e acabamento vão te ajudar a cobrar mais pela cadeira. Se ainda não começou, é o melhor jeito de dar o primeiro passo.
+[Ver as aulas da semana]({{link}})
 
-Te vejo na segunda!` },
+Se não for o momento, tudo bem: é só ignorar este e-mail.` },
 
   { id: 'convite_semana_reenvio', canal: 'email', publico: 'contatos', link_tipo: 'semana', titulo: 'Convite da Semana: reenvio para quem não abriu', filtro: { eng: 'nao_abriu' },
-    assunto: 'Sua vaga na Semana do Barbeiro ainda está aberta',
-    texto: `{{nome}}, passando rapidinho: as inscrições da próxima turma da Semana do Barbeiro estão abertas.
+    assunto: 'Ficou para depois, {{nome}}?',
+    texto: `{{nome}}, só para não passar batido: a nova turma da Semana do Barbeiro começa na segunda.
 
-São 10 aulas grátis com o professor Cris Aita, pelo celular, começando na segunda.
+São 10 aulas do meu curso, sem custo, direto no celular, com live para tirar dúvidas.
 
-[Garantir minha vaga]({{link}})` },
+[Garantir minha vaga]({{link}})
+
+Abraço,` },
 
   { id: 'convite_semana_wa', canal: 'whatsapp', publico: 'contatos', link_tipo: 'semana', titulo: 'WhatsApp: convite da Semana (quem abriu ou clicou)', filtro: { eng: 'abriu_ou_clicou' },
     flow_cfg: 'mc_flow_convite', resumo: 'Template de convite da Semana com botão de URL dinâmica usando o campo convite_link.' },
 
   { id: 'convite_barbearia_maps', canal: 'email', publico: 'contatos', link_tipo: 'semana', titulo: 'Convite para barbearias (lista do Google Maps)', filtro: { lista: 'barbearias_maps', eng: 'nao_convidado' },
-    assunto: 'Aulas grátis de corte para a equipe da {{nome}}',
-    texto: `Olá! Aqui é o professor Cris Aita, criador da Barber School.
+    assunto: 'Aulas de corte para sua equipe?',
+    texto: `Olá, pessoal da {{nome}}. Aqui é o Cris Aita, criador da Barber School.
 
-Encontrei a {{nome}} no Google e quero fazer um convite para você e para os barbeiros da sua equipe: a **Semana do Barbeiro**, 10 aulas completas do meu curso, de graça, pelo celular.
+Vi a barbearia de vocês no Google e queria fazer um convite rápido: a **Semana do Barbeiro** é uma turma de 10 aulas do meu curso, sem custo, pelo celular. Serve para quem está começando na cadeira e para quem já corta e quer acertar o degradê e o acabamento.
 
-Tem degradê, Mid Fade, barba passo a passo, Flat Top e progressiva masculina, além de live comigo na segunda e na sexta para tirar dúvidas.
+Tem Mid Fade, barba passo a passo, Flat Top e live comigo na segunda e na sexta.
 
-[Quero minha vaga grátis]({{link}})
+Se fizer sentido para alguém da equipe, a inscrição é individual e leva 1 minuto:
 
-Se não quiser receber outros convites, é só clicar no link no fim deste e-mail.` },
+[Ver as aulas da semana]({{link}})
+
+Se preferir não receber convites, use o link no fim deste e-mail.` },
 
   { id: 'convite_barbeearia_email', canal: 'email', publico: 'contatos', link_tipo: 'barbeearia', titulo: 'Convite Barbeearia: 30 dias do Plus para alunos', filtro: { eng: 'nao_convidado' },
     assunto: '{{nome}}, um presente para os alunos da Barber School',
