@@ -148,7 +148,7 @@ module.exports = handler(['GET'], async (req, res) => {
     ]);
     const cfg = Object.fromEntries(cfgRows.map(r => [r.chave, r.valor]));
     const visto = Object.fromEntries(prog.map(p => [p.aula_id, p.assistiu_em]));
-    const dados = so(lead, COLS + ',cert_paid_at,curso_paid_at,barberhub_paid_at,lgpd_consent,manychat_id');
+    const dados = so(lead, COLS + ',cert_paid_at,cert_forma,cert_valor,cert_criado_em,cert_expira_em,curso_paid_at,barberhub_paid_at,lgpd_consent,manychat_id');
     dados.cpf = lead.cpf ? `***.${String(lead.cpf).slice(3, 6)}.***-${String(lead.cpf).slice(-2)}` : null;
     return send(res, 200, {
       aluno: dados,

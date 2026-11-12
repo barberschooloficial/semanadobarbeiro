@@ -33,9 +33,9 @@ module.exports = handler(['GET', 'POST'], async (req, res) => {
     // Pendente: confere no Asaas (o webhook pode atrasar ou não estar configurado)
     if (l.cert_status === 'pendente' && l.cert_payment_id && podeConsultar(l.cert_payment_id)) {
       const s = await comTimeout(asaas.situacao(l.cert_payment_id), 6000).catch(() => null);
-      if (s?.pago) { await marcarPago(l, s.status, cfg); return send(res, 200, { status: 'pago' }); }
+      if (s?.pago) { await marcarPago(l, s.status, cfg, s.forma); return send(res, 200, { status: 'pago' }); }
     }
-    return send(res, 200, { status: l.cert_status || null, expira: l.cert_expira_em || null, preco: publico(await precoCert(l, cfg)) });
+    return send(res, 200, { status: l.cert_status || null, forma: l.cert_forma || null, expira: l.cert_expira_em || null, preco: publico(await precoCert(l, cfg)) });
   }
 
   const b = await readJson(req);
@@ -46,17 +46,31 @@ module.exports = handler(['GET', 'POST'], async (req, res) => {
   if (lead.cert_status === 'pago') return send(res, 200, { ok: true, pago: true });
   const p = await precoCert(lead, cfg);
 
-  // Cobrança em aberto com o preço de agora: devolve a mesma
+  // Formas aceitas no certificado: Pix (padrão, QR na própria página) ou cartão. Boleto não.
+  const forma = b.forma === 'cartao' ? 'CREDIT_CARD' : 'PIX';
+
+  // Cobrança em aberto com o preço de agora: devolve a mesma (trocando a forma se a pessoa pediu cartão,
+  // ou tirando o "cliente escolhe" das cobranças antigas, que deixava pagar com boleto)
   if (lead.cert_status === 'pendente' && lead.cert_invoice_url) {
     const mesmoPreco = !lead.cert_valor || Math.abs(Number(lead.cert_valor) - p.valor) < 0.01;
     if (mesmoPreco) {
+      let invoiceUrl = lead.cert_invoice_url;
+      if (lead.cert_forma !== forma) {
+        const t = await asaas.trocarForma(lead.cert_payment_id, forma).catch(e => { console.error('cert forma', e.message); return null; });
+        if (t) {
+          invoiceUrl = t.invoiceUrl || invoiceUrl;
+          await db.update('sdb_leads', `id=eq.${lead.id}`, { cert_forma: forma, cert_invoice_url: invoiceUrl });
+          await logEvento('cert_forma', { lead_id: lead.id, payload: { payment: lead.cert_payment_id, forma } }).catch(() => {});
+        }
+      }
+      if (forma === 'CREDIT_CARD') return send(res, 200, { ok: true, invoiceUrl, cartao: true, preco: publico(p) });
       const pix = await asaas.pix(lead.cert_payment_id);
       if (pix && lead.cert_expira_em) pix.expira = lead.cert_expira_em;
-      return send(res, 200, { ok: true, invoiceUrl: lead.cert_invoice_url, pix, preco: publico(p) });
+      return send(res, 200, { ok: true, invoiceUrl, pix, preco: publico(p) });
     }
     // o preço mudou (ex.: abriu a última chance): troca a cobrança antiga pela nova
     const s = await comTimeout(asaas.situacao(lead.cert_payment_id), 6000).catch(() => null);
-    if (s?.pago) { await marcarPago(lead, s.status, cfg); return send(res, 200, { ok: true, pago: true }); }
+    if (s?.pago) { await marcarPago(lead, s.status, cfg, s.forma); return send(res, 200, { ok: true, pago: true }); }
     await asaas.cancelar(lead.cert_payment_id).catch(e => console.error('cert cancelar', e.message));
   }
 
@@ -68,14 +82,17 @@ module.exports = handler(['GET', 'POST'], async (req, res) => {
     lead, cpf, valor: p.valor,
     descricao: `Certificado de Participação — Semana do Barbeiro (Barber School)${p.promo ? ` · promocional de R$ ${p.cheio.toFixed(2).replace('.', ',')} por R$ ${p.valor.toFixed(2).replace('.', ',')}` : ''}`,
     referencia: `cert:${lead.id}`, successUrl: voltaPara,
-    soPix: p.promo, vence: p.promo && p.ate ? ymdBR(p.ate) : null,
+    forma, vence: p.promo && p.ate ? ymdBR(p.ate) : null,
   });
   const expira = p.promo && p.ate ? new Date(p.ate).toISOString() : null;
 
-  await db.update('sdb_leads', `id=eq.${lead.id}`, { cpf, cert_status: 'pendente', cert_payment_id: cob.id, cert_invoice_url: cob.invoiceUrl, cert_valor: p.valor, cert_expira_em: expira, cert_criado_em: new Date().toISOString() });
+  await db.update('sdb_leads', `id=eq.${lead.id}`, { cpf, cert_status: 'pendente', cert_payment_id: cob.id, cert_invoice_url: cob.invoiceUrl, cert_valor: p.valor, cert_expira_em: expira, cert_criado_em: new Date().toISOString(), cert_forma: forma });
   await comTimeout(manychat.sync(lead, { tags: ['sdb_cert_pendente'], campos: { cert_link: cob.invoiceUrl } }), 4000);
-  await logEvento('cert_cobranca', { lead_id: lead.id, payload: { payment: cob.id, valor: p.valor, fase: p.fase } });
+  await logEvento('cert_cobranca', { lead_id: lead.id, payload: { payment: cob.id, valor: p.valor, fase: p.fase, forma } });
+  // 5 min depois, se não pagou, a Bia lembra no WhatsApp (pela extensão)
+  await require('./_lib/grupos-bv').lembreteCert(lead, cob.id).catch(e => console.error('lembrete cert', e.message));
 
+  if (forma === 'CREDIT_CARD') return send(res, 200, { ok: true, invoiceUrl: cob.invoiceUrl, cartao: true, preco: publico(p) });
   const pix = await asaas.pix(cob.id);
   if (pix && expira) pix.expira = expira;
   send(res, 200, { ok: true, invoiceUrl: cob.invoiceUrl, pix, preco: publico(p) });

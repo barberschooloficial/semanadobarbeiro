@@ -38,6 +38,8 @@ const CAMPOS_CFG = [
     { chave: 'cert_preco_cheio', rotulo: 'Preço cheio do certificado (R$)', tipo: 'num', ajuda: 'Aparece riscado ("de") durante a promoção e vale depois dela. Igual ao promocional desliga a promoção.' },
     { chave: 'cert_promo_horas', rotulo: 'Horas de preço promocional depois do cadastro', tipo: 'int' },
     { chave: 'cert_ultima_min', rotulo: 'Minutos da última chance (link da Bia)', tipo: 'int' },
+    { chave: 'cert_lembrete_ativo', rotulo: 'Lembrete no WhatsApp para quem gerou e não pagou', tipo: 'bool', ajuda: 'A Bia chama no privado pela extensão, só se a cobrança continuar em aberto e dentro do horário das boas-vindas.' },
+    { chave: 'cert_lembrete_min', rotulo: 'Lembrete: minutos depois de gerar a cobrança', tipo: 'int' },
     { chave: 'barberhub_preco', rotulo: 'Preço da Barbeearia no app (R$)', tipo: 'num' },
     { chave: 'barberhub_ciclo', rotulo: 'Cobrança da Barbeearia', tipo: 'sel', opcoes: [['MONTHLY', 'Assinatura mensal'], ['UNICO', 'Pagamento único']] },
     { chave: 'barbeearia_convite_url', rotulo: 'Link do convite de 30 dias da Barbeearia', tipo: 'url' },
