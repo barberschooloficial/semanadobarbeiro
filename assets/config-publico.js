@@ -1,9 +1,10 @@
 // ====== CONFIGURAÇÕES PÚBLICAS — edite aqui sem mexer no resto do código ======
 window.SDB = {
-  // Meta Pixel (deixe vazio para desligar)
-  PIXEL_ID: '',
-  // Número do WhatsApp conectado ao ManyChat (só dígitos, com 55)
-  WHATSAPP_NUMERO: '5547999999999',
+  // Meta Pixel (deixe vazio para desligar). Mesmo pixel do barberschool.com.br: um público só nos três sites.
+  // Para a API de Conversões, coloque o mesmo número em META_PIXEL_ID na Vercel.
+  PIXEL_ID: '248501202423790',
+  // Reserva do WhatsApp do suporte (o número de verdade vem do painel: Configurações → whatsapp_suporte)
+  WHATSAPP_NUMERO: '5519988321044',
   // Palavra que dispara o fluxo de boas-vindas no ManyChat
   WHATSAPP_PALAVRA: 'SEMANA',
   INSTAGRAM: 'barberschooloficial',

@@ -551,7 +551,9 @@
     // volta do app do banco: confere na hora, sem esperar o próximo ciclo
     const aoVoltar = () => { if (!document.hidden) conferir(); };
     document.addEventListener('visibilitychange', aoVoltar);
-    pixTimer = setInterval(() => { if (!document.hidden) conferir(); }, 3000);
+    // confere a cada 4 s com a tela aberta, por até 20 min (depois só ao voltar para a aba ou no "Já paguei")
+    const inicioPix = Date.now();
+    pixTimer = setInterval(() => { if (!document.hidden && Date.now() - inicioPix < 20 * 60e3) conferir(); }, 4000);
   }
   async function cobrarCert(body) {
     $('cpfErro').textContent = ''; $('cpfBtn').disabled = true;

@@ -62,15 +62,43 @@
   function brl(v) { return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
 
   // Meta Pixel opcional
-  function pixel(ev, params) {
-    if (!C.PIXEL_ID) return;
+  function pixel(ev, params, eventID) {
+    if (!C.PIXEL_ID || /^\/admin/.test(location.pathname)) return; // painel não entra na medição
     if (!window.fbq) {
       !function (f, b, e, v, n, t, s) { if (f.fbq) return; n = f.fbq = function () { n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments) }; if (!f._fbq) f._fbq = n; n.push = n; n.loaded = !0; n.version = '2.0'; n.queue = []; t = b.createElement(e); t.async = !0; t.src = v; s = b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t, s) }(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
       fbq('init', C.PIXEL_ID); fbq('track', 'PageView');
     }
-    if (ev) fbq('track', ev, params || {});
+    if (ev) fbq('track', ev, params || {}, eventID ? { eventID } : undefined);
   }
   pixel();
+  // Cookies da Meta (_fbp/_fbc) para a API de Conversões casar o cadastro com o clique no anúncio
+  function cookieMeta() {
+    const ck = (n) => { const m = document.cookie.match(new RegExp('(?:^|; )' + n + '=([^;]*)')); return m ? decodeURIComponent(m[1]) : undefined; };
+    let fbc = ck('_fbc');
+    const clid = qs('fbclid');
+    if (!fbc && clid) fbc = `fb.1.${Date.now()}.${clid}`;
+    return { fbp: ck('_fbp'), fbc };
+  }
+
+  // Links para os outros sites da casa (Barber School, Clube, Barbeearia) saem com UTM da Semana do Barbeiro,
+  // para o Google Analytics/Pixel de lá saber que a pessoa veio daqui. Não mexe em link que já tem UTM.
+  const CASA = /(^|\.)(barberschool\.com\.br|barbeearia\.com\.br)$/i;
+  function comUtm(href, content) {
+    try {
+      const u = new URL(href, location.href);
+      if (!CASA.test(u.hostname) || u.searchParams.has('utm_source')) return href;
+      const area = document.getElementById('modAulas') || document.getElementById('fLogin') ? 'app' : 'site';
+      u.searchParams.set('utm_source', 'semanadobarbeiro');
+      u.searchParams.set('utm_medium', area);
+      u.searchParams.set('utm_campaign', 'semana_do_barbeiro');
+      if (content) u.searchParams.set('utm_content', String(content).slice(0, 60));
+      return u.toString();
+    } catch { return href; }
+  }
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest && e.target.closest('a[href]');
+    if (a && !document.getElementById('kpis')) { const n = comUtm(a.href, a.dataset.trackDetalhe || a.dataset.track || caminho()); if (n !== a.href) a.href = n; }
+  }, true);
 
   // Número do suporte: vem do painel (aba Configurações); o do config-publico.js é só reserva
   let numeroSuporte = null;
@@ -120,5 +148,5 @@
     return new Date(dow >= 1 && dow <= ate ? seg : seg + 7 * 864e5);
   }
 
-  window.sdb = { turma, track, api, store, qs, ir, caminho, DEMO, token, maskWhats, maskCpf, toast, esc, quando, brl, pixel, whatsLink, ligarSuporte, C };
+  window.sdb = { turma, track, cookieMeta, comUtm, api, store, qs, ir, caminho, DEMO, token, maskWhats, maskCpf, toast, esc, quando, brl, pixel, whatsLink, ligarSuporte, C };
 })();
