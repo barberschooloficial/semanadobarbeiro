@@ -452,6 +452,16 @@
         <a class="btn ghost" href="/assets/extensao-avisos.zip" download>Baixar extensão</a>
       </div>
 
+      <div class="card" id="gResumo" style="margin-bottom:14px">
+        <div class="hist-cab"><h3>Situação agora</h3><span class="small muted" id="gResumoHora"></span></div>
+        <div class="resumo-grid">
+          <div><span class="rotulo">Sincronização</span><div id="gRSync" class="small"></div></div>
+          <div><span class="rotulo">Recebem avisos</span><div id="gRAtivos" class="small"></div></div>
+          <div><span class="rotulo">Fila</span><div id="gRFila" class="small"></div></div>
+          <div><span class="rotulo">Últimos envios</span><div id="gRUlt" class="small"></div></div>
+        </div>
+      </div>
+
       <div class="card semana-card">
         <div><h3>Calendário dos grupos</h3><p class="small muted" style="margin:0" id="gSemanaTxt">Toda turma, os grupos marcados como <b>Semana do Barbeiro</b> recebem sozinhos: boas-vindas (seg 7h30), módulo liberado (8h), lembrete (ter a qui 18h), live no ar (seg e sex 19h), oferta (sex 12h), sábado 10h e última chamada (dom 18h e 22h). No máximo 3 por dia. Se o WhatsApp Web estiver fechado por mais de 3h depois do horário, o aviso expira.</p></div>
         <button class="btn green" id="gBtnSemana" type="button">Programar esta turma</button>
@@ -1008,6 +1018,21 @@
   const zap = (t) => esc(t).replace(/\*([^*\n]+)\*/g, '<b>$1</b>').replace(/(^|[\s(])_([^_\n]+)_/g, '$1<i>$2</i>').replace(/~([^~\n]+)~/g, '<s>$1</s>');
   const dataLocalBR = (v) => v ? new Date(`${v}:00-03:00`) : null;
 
+  function pintaResumoG(r) {
+    if (!r) return;
+    const q = (iso) => iso ? dataHora(iso) : '';
+    const ha = (iso) => { if (!iso) return 'nunca'; const m = Math.round((Date.now() - Date.parse(iso)) / 60e3); return m < 1 ? 'agora' : m < 60 ? `há ${m} min` : m < 1440 ? `há ${Math.round(m / 60)} h` : `há ${Math.round(m / 1440)} dia(s)`; };
+    $('gResumoHora').textContent = 'atualizado ' + q(r.agora);
+    $('gRSync').innerHTML = r.sync.em ? `Última ${esc(ha(r.sync.em))} (${esc(q(r.sync.em))})<br><b>${r.destinos.total}</b> grupos, comunidades e canais encontrados` : 'Ainda não sincronizou. Abra o WhatsApp Web com a extensão.';
+    $('gRAtivos').innerHTML = r.destinos.ativos.length
+      ? `<b>${r.destinos.ativos.length}</b> ativo(s):<br>${r.destinos.ativos.slice(0, 8).map(d => `${esc(d.nome)} <span class="muted">· ${esc(d.categoria)}</span>`).join('<br>')}${r.destinos.ativos.length > 8 ? `<br><span class="muted">+${r.destinos.ativos.length - 8}</span>` : ''}`
+      : '<b style="color:#b3261e">Nenhum ativado.</b> Ative abaixo os grupos que devem receber.';
+    const f = r.fila;
+    $('gRFila').innerHTML = (f.agora ? `<b>${f.agora}</b> saindo agora (${f.pendentes_agora} envio(s) pendente(s))` : 'Nada saindo agora.')
+      + (f.proximos.length ? `<br>Próximos:<br>${f.proximos.map(a => `${esc(q(a.agendar_em))} · ${esc(a.titulo)}`).join('<br>')}` : '<br><span class="muted">Nenhum programado.</span>');
+    $('gRUlt').innerHTML = r.ultimos.length ? r.ultimos.map(u => `${u.status === 'enviado' ? '✓' : '✗'} ${esc(u.destino)} <span class="muted">· ${esc(q(u.em))}</span>${u.erro ? `<br><span class="muted">${esc(u.erro)}</span>` : ''}`).join('<br>') : 'Nenhum envio ainda.';
+  }
+
   async function carregarGrupos(forcar) {
     if (!G.dados || forcar) G.dados = await fetchD('wa_painel');
     const d = G.dados, e = d.extensao;
@@ -1018,6 +1043,7 @@
       ['Chave WA_EXT_KEY', e.chave_ok ? 'ok' : '', e.chave_ok ? 'configurada' : 'falta na Vercel'],
     ].map(([n, c, t]) => `<span class="canal-st ${c}"><i></i>${esc(n)}: ${esc(t)}</span>`).join('');
     $('gPassos').hidden = !!(e.online && d.destinos.length);
+    pintaResumoG(d.resumo);
     $('gChaveCopiar').disabled = $('gChaveVer').disabled = !e.chave;
     $('gChaveCopiar').onclick = async () => { try { await navigator.clipboard.writeText(e.chave); sdb.toast('Chave copiada. Cole na extensão.'); } catch { $('gChaveTxt').textContent = e.chave; $('gChaveTxt').hidden = false; sdb.toast('Não deu para copiar sozinho: selecione a chave e copie.'); } };
     $('gChaveVer').onclick = () => { const t = $('gChaveTxt'); t.hidden = !t.hidden; t.textContent = t.hidden ? '' : e.chave; $('gChaveVer').textContent = t.hidden ? 'Mostrar' : 'Esconder'; };
