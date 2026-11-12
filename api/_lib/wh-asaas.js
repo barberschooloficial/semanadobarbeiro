@@ -32,7 +32,10 @@ async function acharLead(p) {
 module.exports = handler(['GET', 'POST'], async (req, res) => {
   // O Asaas testa o endereço antes de ativar o webhook: responde 200 sem gravar nada.
   if (req.method === 'GET') return send(res, 200, { ok: true, pronto: true });
-  if (!tokenOk(req)) return send(res, 401, { erro: 'token inválido' });
+  if (!tokenOk(req)) {
+    await logEvento('asaas_webhook_negado', { payload: { motivo: process.env.ASAAS_WEBHOOK_TOKEN ? 'token diferente do ASAAS_WEBHOOK_TOKEN' : 'ASAAS_WEBHOOK_TOKEN vazio na Vercel', tem_token: !!req.headers['asaas-access-token'] } }).catch(() => {});
+    return send(res, 401, { erro: 'token inválido' });
+  }
   const b = await readJson(req);
   const p = b.payment || {};
   if (!p.id || (!PAGO.includes(b.event) && !ESTORNO.includes(b.event))) return send(res, 200, { ok: true, ignorado: true });
