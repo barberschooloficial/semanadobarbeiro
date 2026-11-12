@@ -56,6 +56,9 @@ const CAMPOS_CFG = [
     { chave: 'wa_limite_dia', rotulo: 'Máximo de avisos por grupo por dia', tipo: 'int' },
     { chave: 'wa_intervalo_min', rotulo: 'Extensão: espera mínima entre grupos (segundos)', tipo: 'int' },
     { chave: 'wa_intervalo_max', rotulo: 'Extensão: espera máxima entre grupos (segundos)', tipo: 'int' },
+    { chave: 'email_aquecimento', rotulo: 'Aquecer o envio de convites por e-mail', tipo: 'bool', ajuda: 'Convites para listas importadas começam pequenos e dobram a cada dia (50, 100, 200...) até o teto abaixo. Protege o domínio no Resend.' },
+    { chave: 'email_aquecimento_inicio', rotulo: 'Convites no primeiro dia', tipo: 'int' },
+    { chave: 'email_convite_dia', rotulo: 'Teto de convites por e-mail por dia', tipo: 'int', ajuda: 'O que passar fica para o dia seguinte sozinho. E-mails das aulas para quem se cadastrou não entram nesse limite.' },
   ] },
   { titulo: 'Prospecção de barbearias (Apify)', campos: [
     { chave: 'prosp_ativo', rotulo: 'Buscar barbearias todo mês', tipo: 'bool', ajuda: 'Começa no dia 1, uma cidade por vez, e para no teto de gasto. Precisa da chave APIFY_TOKEN na Vercel.' },
@@ -136,6 +139,20 @@ async function garantirCalendario(turma, cfg, folgaMs = 10 * 60e3) {
   return { criados, pulados };
 }
 
+// Quantos convites frios ainda podem sair hoje (horário de Brasília)
+async function cotaConvites(cfg) {
+  const teto = Math.max(10, Number(cfg.email_convite_dia || 500));
+  let limite = teto;
+  if (cfg.email_aquecimento !== '0') {
+    const primeiro = (await db.select('sdb_contato_envios', 'select=enviado_em&status=eq.enviado&order=enviado_em.asc&limit=1'))[0];
+    const dias = primeiro ? Math.floor((agora() - Date.parse(primeiro.enviado_em)) / DIA) : 0;
+    limite = Math.min(teto, Math.round(Number(cfg.email_aquecimento_inicio || 50) * Math.pow(2, dias)));
+  }
+  const hoje = new Date(Date.parse(`${ymd(agora())}T00:00:00-03:00`)).toISOString();
+  const feitos = (await db.select('sdb_contato_envios', `select=contato_id&status=eq.enviado&enviado_em=gte.${encodeURIComponent(hoje)}&limit=${limite + 1}`)).length;
+  return Math.max(0, limite - feitos);
+}
+
 async function processar(limiteMs = 40000) {
   // Automático: garante o calendário da turma atual e da próxima (véspera de domingo)
   const cfg0 = await config();
@@ -176,9 +193,13 @@ async function processar(limiteMs = 40000) {
     const vars = (x, ch) => ehC ? varsContato(x, d, ch) : varsDe(x);
     const linha = (id, ok, er) => ({ disparo_id: d.id, [COL]: id, status: ok ? 'enviado' : 'falha', erro: ok ? null : String(er).slice(0, 200) });
 
+    // Convites para listas frias: aquecimento do domínio (começa pequeno e dobra a cada dia, até o teto diário)
+    // (espalha ao longo do dia: no máximo 30 convites a cada 5 minutos)
+    const limEmail = d.canal === 'email' && ehC ? Math.min(30, await cotaConvites(cfg0)) : pendentes.length;
     if (d.canal === 'email') {
-      for (let i = 0; i < pendentes.length && Date.now() - t0 < limiteMs; i += 100) {
-        const lote = pendentes.slice(i, i + 100);
+      const filaE = pendentes.slice(0, limEmail);
+      for (let i = 0; i < filaE.length && Date.now() - t0 < limiteMs; i += 100) {
+        const lote = filaE.slice(i, i + 100);
         const r = await enviarLote(lote.map(l => ({
           ref: l.id, para: l.email, assunto: preencher(d.assunto, vars(l, 'e')), texto: preencher(d.texto, vars(l, 'e')),
           descadastro: ehC ? `${SITE_URL()}/api/disparos?acao=descadastro&c=${l.token}` : linkSair(l),
