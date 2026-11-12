@@ -46,6 +46,7 @@
     <div class="pix" id="pix" hidden>
       <div class="pix-cab"><span class="pix-selo">PIX</span><b>Pague R$ 19,70 pelo app do seu banco</b></div>
       <img id="pixQr" alt="QR Code Pix" width="198" height="198">
+      <p class="pix-tempo" id="pixTempo" hidden></p>
       <p class="small muted" style="margin:0 0 6px">Ou copie o código Pix e cole na opção <b>Pix copia e cola</b>:</p>
       <div class="cupom"><code id="pixCopia"></code><button class="btn sm green" type="button" id="pixCopiar">Copiar</button></div>
       <p class="pix-espera"><span class="ponto"></span> Aguardando o pagamento. Esta página atualiza sozinha.</p>
@@ -66,11 +67,29 @@
   document.getElementById('nao').href = '/obrigado?t=' + t;
   const cpf = document.getElementById('cpf'); maskCpf(cpf);
   const $ = (id) => document.getElementById(id);
+
+  // Contador até o Pix vencer (o Asaas devolve "AAAA-MM-DD HH:MM:SS" no horário de Brasília)
+  let tempoTimer = null;
+  function contador(expira, el) {
+    if (tempoTimer) clearInterval(tempoTimer);
+    const fim = expira ? Date.parse(String(expira).replace(' ', 'T') + (/[zZ]|[+-]\d\d:?\d\d$/.test(expira) ? '' : '-03:00')) : NaN;
+    if (!el) return;
+    if (!fim) { el.hidden = true; return; }
+    const pinta = () => {
+      const r = Math.max(0, fim - Date.now()), h = Math.floor(r / 3600e3), m = Math.floor(r % 3600e3 / 60e3), s = Math.floor(r % 60e3 / 1e3);
+      const dois = (n) => String(n).padStart(2, '0');
+      el.hidden = false;
+      el.innerHTML = r > 0 ? `Este Pix vence em <b>${h ? h + 'h ' : ''}${dois(m)}min ${dois(s)}s</b>` : '<b>Este Pix venceu.</b> Feche e gere um novo.';
+      if (!r) clearInterval(tempoTimer);
+    };
+    pinta(); tempoTimer = setInterval(pinta, 1000);
+  }
   function mostrarPix(r) {
     $('form').hidden = true; $('pix').hidden = false; sdb.track('cert_pix');
     $('pixQr').src = 'data:image/png;base64,' + r.pix.qr;
     $('pixCopia').textContent = r.pix.copia;
     $('pixOutro').href = r.invoiceUrl;
+    contador(r.pix.expira, $('pixTempo'));
     $('pixCopiar').onclick = async () => {
       try { await navigator.clipboard.writeText(r.pix.copia); sdb.toast('Código Pix copiado'); }
       catch { const rg = document.createRange(); rg.selectNodeContents($('pixCopia')); const se = getSelection(); se.removeAllRanges(); se.addRange(rg); sdb.toast('Código selecionado: copie com o celular'); }
