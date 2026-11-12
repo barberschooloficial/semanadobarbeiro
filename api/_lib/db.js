@@ -32,6 +32,7 @@ const db = LOCAL ? require('./db-local').db : {
   upsert: (table, row, onConflict) =>
     req(`${table}?on_conflict=${onConflict}`, { method: 'POST', body: row, prefer: 'resolution=merge-duplicates,return=representation' }).then(r => r[0]),
   update: (table, query, patch) => req(`${table}?${query}`, { method: 'PATCH', body: patch, prefer: 'return=representation' }),
+  rpc: (fn, args) => req(`rpc/${fn}`, { method: 'POST', body: args || {} }),
   enc,
 };
 

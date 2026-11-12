@@ -67,7 +67,9 @@ async function enviarLote(msgs) {
   const r = await fetch(`${BASE}/emails/batch`, { method: 'POST', headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   const d = await r.json().catch(() => ({}));
   if (!r.ok) return { ok: [], falhas: msgs.map(m => ({ ref: m.ref, erro: d.message || `Resend ${r.status}` })), parar: r.status === 429 || r.status === 401 || r.status === 403 };
-  return { ok: msgs.map(m => m.ref), falhas: [] };
+  // o Resend devolve os ids na mesma ordem: usados para saber depois se o e-mail foi entregue (webhook)
+  const ids = {}; (d.data || []).forEach((x, i) => { if (x?.id && msgs[i]) ids[msgs[i].ref] = x.id; });
+  return { ok: msgs.map(m => m.ref), falhas: [], ids };
 }
 
 module.exports = { enviarLote, preencher, corpoHtml, layout, textoPuro };
