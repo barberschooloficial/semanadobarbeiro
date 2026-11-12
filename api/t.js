@@ -17,7 +17,7 @@ async function contatoGet(req, res) {
   if (u.searchParams.get('cfg')) {
     const cfg = await config().catch(() => ({}));
     res.statusCode = 200; res.setHeader('Content-Type', 'application/json; charset=utf-8'); res.setHeader('Cache-Control', 'public, max-age=60');
-    return res.end(JSON.stringify({ whatsapp: String(cfg.whatsapp_suporte || '').replace(/\D/g, '') || null }));
+    return res.end(JSON.stringify({ whatsapp: String(cfg.whatsapp_suporte || '').replace(/\D/g, '') || null, inscricao_ate: Number(cfg.inscricao_ate || 3) }));
   }
   // /suporte — redireciona para o WhatsApp do suporte cadastrado no painel (troca o número sem mexer nas automações)
   if (u.searchParams.get('zap')) {

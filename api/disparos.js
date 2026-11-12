@@ -45,6 +45,7 @@ const CAMPOS_CFG = [
     { chave: 'premio_vitalicio_cupom', rotulo: 'Dia 4: cupom do curso vitalício', tipo: 'texto', ajuda: 'O cupom precisa existir na Hotmart.' },
   ] },
   { titulo: 'Turma e lives', campos: [
+    { chave: 'inscricao_ate', rotulo: 'Quem se cadastra até este dia entra na turma da semana', tipo: 'sel', opcoes: [['3', 'Quarta (padrão)'], ['4', 'Quinta'], ['5', 'Sexta'], ['6', 'Sábado']], ajuda: 'Depois desse dia, o cadastro vai para a turma da próxima segunda. Quem entra tarde vê todos os módulos já liberados.' },
     { chave: 'aula_hora', rotulo: 'Hora em que o módulo abre', tipo: 'hora' },
     { chave: 'live_dias', rotulo: 'Dias das lives', tipo: 'dias', ajuda: '1 = segunda ... 7 = domingo. Ex.: 1,5' },
     { chave: 'live_inicio', rotulo: 'Início da live', tipo: 'hora' },

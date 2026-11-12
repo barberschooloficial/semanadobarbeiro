@@ -37,7 +37,7 @@ module.exports = handler(['POST'], async (req, res) => {
     if (!lead.lgpd_consent) [lead] = await db.update('sdb_leads', `id=eq.${lead.id}`, { lgpd_consent: true });
   } else {
     lead = await db.insert('sdb_leads', {
-      nome, whatsapp, email, lgpd_consent: true, turma_inicio: turmaParaCadastro(t),
+      nome, whatsapp, email, lgpd_consent: true, turma_inicio: turmaParaCadastro(t, cfg.inscricao_ate),
       utm_source: utm('utm_source'), utm_medium: utm('utm_medium'),
       utm_campaign: utm('utm_campaign'), utm_content: utm('utm_content'),
       origem: utm('origem') || 'site',
