@@ -135,6 +135,7 @@ function novoRegistro(table, row) {
   if (table === 'sdb_contatos') { r.id = r.id || crypto.randomUUID(); r.token = r.token || crypto.randomBytes(12).toString('hex'); r.created_at = new Date().toISOString(); r.email_optout = !!r.email_optout; r.wa_optout = !!r.wa_optout; }
   if (table === 'sdb_wa_avisos') { const t = load().sdb_wa_avisos || []; r.id = (t.reduce((m, x) => Math.max(m, x.id), 0) || 0) + 1; r.criado_em = new Date().toISOString(); }
   if (table === 'sdb_wa_aviso_envios') r.enviado_em = new Date().toISOString();
+  if (table === 'sdb_wa_dm') { const t = load().sdb_wa_dm || []; r.id = (t.reduce((m, x) => Math.max(m, x.id), 0) || 0) + 1; r.created_at = new Date().toISOString(); r.tentativas = r.tentativas || 0; }
   if (table === 'sdb_wa_destinos') r.criado_em = new Date().toISOString();
   if (table === 'sdb_disparos') { r.publico = r.publico || 'leads'; }
   if (table === 'sdb_trilha') { r.id = (load().sdb_trilha || []).length + 1; r.created_at = new Date(Date.now() + Number(process.env.SDB_OFFSET_MS || 0)).toISOString(); }
@@ -142,7 +143,7 @@ function novoRegistro(table, row) {
   return r;
 }
 
-const UNICOS = { sdb_leads: ['whatsapp', 'token'], sdb_eventos: ['chave'], sdb_wa_destinos: ['id'] };
+const UNICOS = { sdb_leads: ['whatsapp', 'token'], sdb_eventos: ['chave'], sdb_wa_destinos: ['id'], sdb_wa_dm: ['chave'] };
 
 const db = {
   select: async (table, query = '') => linhas(table, query),

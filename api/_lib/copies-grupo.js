@@ -95,6 +95,40 @@ O desconto de R$ 147 vai até amanhã às 23h59 👉 ${APP}` },
   { id: 'g_encerramento', titulo: 'Encerramento (segunda seguinte)', texto: `Obrigado por fazer parte da *Semana do Barbeiro*! 🙏🏻💈
 Para quem entrou na Barber School: bem-vindo à família! O acesso chegou no seu e-mail.
 Para todos: continuem acompanhando o professor Cris Aita no Instagram 👉 ${IG}` },
+
+  // ---------- Boas-vindas no privado (Bia do suporte), quando alguém entra num grupo da Semana ----------
+  // Montadas na hora do envio: a principal recebe as linhas abaixo conforme o cadastro e o certificado.
+  { id: 'g_dm_bv', dm: true, titulo: 'Privado: boas-vindas da Bia (mensagem principal)',
+    dica: 'Variáveis: {{nome}}, {{linha_perfil}}, {{linha_modulo}}, {{linha_acesso}}, {{linha_certificado}}, {{linha_suporte}}. Linha que ficar vazia some sozinha.',
+    texto: `Oi, {{nome}}! Tudo bem? 😊
+
+Aqui é a *Bia, do suporte da Semana do Barbeiro*. Vi que você acabou de entrar no grupo e vim te dar as boas-vindas!
+
+{{linha_perfil}}
+
+{{linha_modulo}}
+
+{{linha_acesso}}
+
+{{linha_certificado}}
+
+Qualquer dúvida, pode contar comigo: {{linha_suporte}}. Estou aqui para te ajudar.
+
+Aproveite cada aula e bons estudos! 💈` },
+  { id: 'g_dm_perfil_iniciante', dm: true, titulo: 'Privado: linha para quem nunca cortou', dica: 'Entra em {{linha_perfil}} para quem respondeu "Nunca peguei numa máquina".',
+    texto: 'Vi no seu cadastro que você está começando do zero. Fica tranquilo: as aulas foram pensadas para quem nunca pegou numa máquina. Assista na ordem e com calma.' },
+  { id: 'g_dm_perfil_ja_corta', dm: true, titulo: 'Privado: linha para quem já corta amigos', dica: 'Entra em {{linha_perfil}} para quem já corta amigos e família.',
+    texto: 'Vi no seu cadastro que você já corta amigos e família. Nesta semana você vai ganhar técnica para cortar com mais segurança e começar a cobrar pelo seu trabalho.' },
+  { id: 'g_dm_perfil_profissional', dm: true, titulo: 'Privado: linha para quem já é barbeiro', dica: 'Entra em {{linha_perfil}} para quem trabalha em barbearia ou tem a sua.',
+    texto: 'Vi no seu cadastro que você já trabalha com barbearia. Repare nos detalhes de acabamento do professor Cris Aita: é o que faz o cliente voltar e pagar mais.' },
+  { id: 'g_dm_sem_cadastro', dm: true, titulo: 'Privado: linha para quem não achamos o cadastro', dica: 'Entra em {{linha_acesso}} quando o número do grupo não bate com nenhum cadastro.',
+    texto: 'Não encontrei um cadastro com este número. Se ainda não fez, é por aqui que você recebe as 10 aulas grátis: semanadobarbeiro.com.br' },
+  { id: 'g_dm_cert_pago', dm: true, titulo: 'Privado: linha para quem já comprou o certificado', dica: 'Entra em {{linha_certificado}}.',
+    texto: 'Seu *Certificado de Participação* já está garantido ✅. Ele aparece no app assim que você concluir as 10 aulas.' },
+  { id: 'g_dm_cert_pendente', dm: true, titulo: 'Privado: linha para quem gerou o certificado e não pagou', dica: 'Entra em {{linha_certificado}}. Use {{cert_link}}.',
+    texto: 'Vi que você começou a emitir o certificado e o pagamento ainda não caiu. Se quiser concluir, é por aqui: {{cert_link}}' },
+  { id: 'g_dm_cert_nao', dm: true, titulo: 'Privado: linha para quem não comprou o certificado', dica: 'Entra em {{linha_certificado}}. Escreva só "-" para não falar do certificado. Use {{cert_link}} e {{cert_preco}}.',
+    texto: 'Ah, e se quiser comprovar que fez a Semana, o certificado é opcional (R$ {{cert_preco}}) e você emite pelo app.' },
 ];
 
 module.exports = { COPIES_GRUPO };

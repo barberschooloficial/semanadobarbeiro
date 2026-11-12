@@ -2,6 +2,7 @@
 // A extensão roda no WhatsApp Web do número de avisos, busca a fila aqui e devolve o resultado de cada envio.
 //
 // Extensão (header x-ext-key = WA_EXT_KEY):  POST ?acao=wa_sync · GET ?acao=wa_fila|wa_resumo · POST ?acao=wa_resultado
+//                                            POST ?acao=wa_entrou (alguém entrou num grupo) · POST ?acao=wa_dm_resultado (boas-vindas no privado)
 // Painel   (header x-admin-key):             GET ?acao=wa_painel · POST ?acao=wa_destino|wa_criar|wa_cancelar|wa_semana
 const crypto = require('crypto');
 const { db, config } = require('./db');
@@ -10,6 +11,7 @@ const { agora } = require('./util');
 const { em, rotulo, segundaDa } = require('./turma');
 const { COPIES_GRUPO } = require('./copies-grupo');
 const { ajustar } = require('./copies');
+const BV = require('./grupos-bv');
 
 const TIPOS = new Set(['grupo', 'comunidade', 'canal']);
 const CATEGORIAS = { semana: 'Semana do Barbeiro', alunos_bs: 'Alunos Barber School', comunidade: 'Comunidade', canal: 'Canal', outro: 'Outro', nenhuma: 'Sem categoria' };
@@ -95,6 +97,7 @@ async function resumo() {
     },
     ultimos: ultimos.map(u => ({ titulo: titulos[u.aviso_id] || 'Aviso', destino: nomesD[u.destino_id] || u.destino_id, status: u.status, erro: u.erro, em: u.enviado_em })),
     auto: cfg.grupos_auto !== '0',
+    boas_vindas: await BV.resumo().catch(() => null),
   };
 }
 
@@ -144,8 +147,13 @@ async function extensao(acao, req, res, b) {
         intervalo: [Math.max(8, Number(cfg.wa_intervalo_min || 20)), Math.max(15, Number(cfg.wa_intervalo_max || 90))],
       });
     }
-    return send(res, 200, { aviso: null });
+    // Sem aviso de grupo agora: uma boas-vindas no privado (se houver na fila e estiver no horário)
+    const dm = await BV.proximo().catch(e => { console.error('bv proximo', e.message); return null; });
+    return send(res, 200, { aviso: null, dm, intervalo: [Math.max(45, Number(cfg.wa_intervalo_min || 20)), Math.max(90, Number(cfg.wa_intervalo_max || 90))] });
   }
+
+  if (acao === 'wa_entrou') return send(res, 200, await BV.entrou(b));
+  if (acao === 'wa_dm_resultado') return send(res, 200, await BV.resultado(b));
 
   if (acao === 'wa_resumo') return send(res, 200, await resumo());
 
@@ -174,7 +182,7 @@ async function painel(acao, req, res, b) {
     const avisos = await db.select('sdb_wa_avisos', 'select=*&order=agendar_em.desc&limit=120');
     const visto = cfg.wa_ext_visto || null;
     return send(res, 200, {
-      destinos, avisos, categorias: CATEGORIAS, copies: ajustar(COPIES_GRUPO, cfg).map(c => ({ id: c.id, titulo: c.titulo, texto: c.texto, auto: !!c.auto, ajustada: !!c.ajustada })),
+      destinos, avisos, categorias: CATEGORIAS, copies: ajustar(COPIES_GRUPO, cfg).filter(c => !c.dm).map(c => ({ id: c.id, titulo: c.titulo, texto: c.texto, auto: !!c.auto, ajustada: !!c.ajustada })),
       extensao: { visto_em: visto, online: !!visto && agora() - Date.parse(visto) < 3 * 60e3, numero: cfg.wa_ext_numero || '', versao: cfg.wa_ext_versao || '', chave_ok: (process.env.WA_EXT_KEY || '').length >= 16, chave: process.env.WA_EXT_KEY || '' }, // só chega aqui quem passou pela senha do painel
       auto: cfg.grupos_auto !== '0', limite_dia: Number(cfg.wa_limite_dia || 4), agora: agoraIso(), resumo: await resumo(),
     });
@@ -237,7 +245,7 @@ async function painel(acao, req, res, b) {
   return send(res, 400, { erro: 'Ação inválida' });
 }
 
-const EXT = new Set(['wa_sync', 'wa_fila', 'wa_resultado', 'wa_resumo']);
+const EXT = new Set(['wa_sync', 'wa_fila', 'wa_resultado', 'wa_resumo', 'wa_entrou', 'wa_dm_resultado']);
 const PAINEL = new Set(['wa_painel', 'wa_destino', 'wa_criar', 'wa_cancelar', 'wa_envios', 'wa_semana']);
 
 module.exports = { EXT, PAINEL, extensao, painel, garantirCalendario, CATEGORIAS, extOk, cfgSet };
