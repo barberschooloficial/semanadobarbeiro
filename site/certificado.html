@@ -95,9 +95,13 @@
       catch { const rg = document.createRange(); rg.selectNodeContents($('pixCopia')); const se = getSelection(); se.removeAllRanges(); se.addRange(rg); sdb.toast('Código selecionado: copie com o celular'); }
     };
     $('pix').scrollIntoView({ behavior: 'smooth', block: 'center' });
-    const checar = setInterval(async () => {
-      try { const s = await api('certificado?t=' + t); if (s.status === 'pago') { clearInterval(checar); sdb.ir('/obrigado?t=' + t + '&pago=1'); } } catch {}
-    }, 4000);
+    let ocupado = false;
+    const conferir = async () => {
+      if (ocupado) return; ocupado = true;
+      try { const s = await api('certificado?t=' + t); if (s.status === 'pago') { clearInterval(checar); sdb.ir('/obrigado?t=' + t + '&pago=1'); } } catch {} finally { ocupado = false; }
+    };
+    const checar = setInterval(conferir, 3000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) conferir(); }); // voltou do app do banco
   }
   const btn = document.getElementById('btn'), erro = document.getElementById('erro');
   document.getElementById('form').addEventListener('submit', async (e) => {
