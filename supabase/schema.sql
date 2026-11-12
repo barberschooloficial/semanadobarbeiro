@@ -366,3 +366,51 @@ insert into sdb_config (chave, valor, descricao) values
   ('cert_lembrete_ativo', '1', 'Lembrete no WhatsApp para quem gerou o certificado e não pagou'),
   ('cert_lembrete_min',   '5', 'Minutos depois de gerar a cobrança')
 on conflict (chave) do nothing;
+-- Régua dos disparos: entregue/devolvido pelo webhook do Resend e contagem rápida por bloco
+alter table sdb_contato_envios add column if not exists resend_id text;
+alter table sdb_contato_envios add column if not exists entregue_em timestamptz;
+alter table sdb_contato_envios add column if not exists devolvido boolean not null default false;
+alter table sdb_disparo_envios add column if not exists resend_id text;
+alter table sdb_disparo_envios add column if not exists entregue_em timestamptz;
+alter table sdb_disparo_envios add column if not exists devolvido boolean not null default false;
+create index if not exists sdb_contato_envios_resend_idx on sdb_contato_envios (resend_id) where resend_id is not null;
+create index if not exists sdb_disparo_envios_resend_idx on sdb_disparo_envios (resend_id) where resend_id is not null;
+create index if not exists sdb_contatos_regiao_idx on sdb_contatos (lista, regiao);
+
+create or replace function sdb_regua_contatos(p_lista text default '', p_bloco text default '', p_regiao text default '', p_eng text default '', p_canal text default 'email')
+returns json language sql stable security definer set search_path = public as $$
+  with c as (
+    select c.id, c.email, c.whatsapp, c.email_optout, c.wa_optout, c.aberto_em, c.clicado_em, c.lead_id,
+      exists (select 1 from sdb_contato_envios e where e.contato_id = c.id and e.status = 'enviado') as conv,
+      exists (select 1 from sdb_contato_envios e where e.contato_id = c.id and e.entregue_em is not null) as entregue,
+      exists (select 1 from sdb_contato_envios e where e.contato_id = c.id and e.devolvido) as devolvido
+    from sdb_contatos c
+    where (coalesce(p_lista, '') = '' or c.lista = p_lista)
+      and (coalesce(p_regiao, '') = '' or c.regiao = p_regiao)
+      and (coalesce(p_bloco, '') = '' or (p_bloco = '-' and c.bloco is null) or (p_bloco <> '-' and c.bloco = p_bloco))
+  ), f as (
+    select * from c where case coalesce(p_eng, '')
+      when 'nao_convidado' then not conv
+      when 'convidado' then conv
+      when 'nao_abriu' then conv and aberto_em is null and clicado_em is null
+      when 'abriu_ou_clicou' then (aberto_em is not null or clicado_em is not null) and lead_id is null
+      when 'clicou' then clicado_em is not null
+      when 'cadastrou' then lead_id is not null
+      when 'sem_cadastro' then lead_id is null
+      else true end
+  )
+  select json_build_object(
+    'total',       (select count(*) from c),
+    'publico',     (select count(*) from f),
+    'aptos',       (select count(*) from f where case when p_canal = 'whatsapp' then whatsapp is not null and not wa_optout else email is not null and not email_optout end),
+    'enviados',    (select count(*) from c where conv),
+    'entregues',   (select count(*) from c where entregue),
+    'devolvidos',  (select count(*) from c where devolvido),
+    'abertos',     (select count(*) from c where aberto_em is not null or clicado_em is not null),
+    'clicaram',    (select count(*) from c where clicado_em is not null),
+    'cadastraram', (select count(*) from c where lead_id is not null),
+    'sairam',      (select count(*) from c where email_optout)
+  );
+$$;
+revoke all on function sdb_regua_contatos(text, text, text, text, text) from public, anon, authenticated;
+grant execute on function sdb_regua_contatos(text, text, text, text, text) to service_role;
