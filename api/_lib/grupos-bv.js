@@ -8,6 +8,7 @@ const { agora } = require('./util');
 const { turmaDo, janela } = require('./turma');
 const { COPIES_GRUPO } = require('./copies-grupo');
 const { ajustar } = require('./copies');
+const { precoCert } = require('./cert-preco');
 
 const ID_GRUPO = /^[0-9-]{5,40}@g\.us$/;
 const ID_PESSOA = /^\d{5,20}@(c\.us|lid|s\.whatsapp\.net)$/;
@@ -85,13 +86,21 @@ const preencher = (t, v) => String(t).replace(/\{\{(\w+)\}\}/g, (_, k) => v[k] ?
 async function montar(dm, cfg) {
   const C = Object.fromEntries(ajustar(COPIES_GRUPO, cfg).filter(c => c.dm).map(c => [c.id, c]));
   const lead = dm.lead_id ? await db.one('sdb_leads', `select=*&id=eq.${dm.lead_id}`) : null;
-  const v = { nome: primeiro(lead?.nome) || primeiro(dm.nome_wa), cert_preco: String(cfg.cert_preco || '19.70').replace('.', ',') };
+  const v = { nome: primeiro(lead?.nome) || primeiro(dm.nome_wa) };
   if (lead) {
     const app = `${APP_URL()}/?t=${lead.token}`;
     v.cert_link = `${app}&comprar=certificado`;
     v.linha_perfil = linha(C[`g_dm_perfil_${lead.perfil}`]) || '';
     v.linha_acesso = `Seu acesso às aulas: ${app}`;
-    v.linha_certificado = lead.cert_status === 'pago' ? linha(C.g_dm_cert_pago) : lead.cert_status === 'pendente' ? linha(C.g_dm_cert_pendente) : linha(C.g_dm_cert_nao);
+    // Certificado: preço das primeiras 24 h (com prazo) ou, depois delas, a última chance de 10 min (uma vez só)
+    const p = await precoCert(lead, cfg);
+    const reais = (n) => Number(n).toFixed(2).replace('.', ',');
+    Object.assign(v, { cert_preco: reais(p.promo ? p.valor : Number(cfg.cert_preco || 19.7)), cert_cheio: reais(p.cheio), minutos: String(Number(cfg.cert_ultima_min || 10)), oferta_link: `${app}&comprar=certificado&oferta=1` });
+    if (p.ate) { const a = new Date(p.ate - 3 * 3600e3), h = new Date(agora() - 3 * 3600e3); v.prazo = `${a.getUTCDate() === h.getUTCDate() ? 'hoje' : 'amanhã'} às ${a.getUTCHours()}h${String(a.getUTCMinutes()).padStart(2, '0')}`; }
+    const jaUsou = p.fase === 'cheio' && await db.one('sdb_eventos', `select=id&tipo=eq.cert_uc_aberta&lead_id=eq.${lead.id}`).catch(() => null);
+    v.linha_certificado = lead.cert_status === 'pago' ? linha(C.g_dm_cert_pago)
+      : p.fase === 'promo' ? linha(lead.cert_status === 'pendente' ? C.g_dm_cert_pendente : C.g_dm_cert_nao)
+      : p.fase === 'cheio' && !jaUsou && p.cheio > Number(cfg.cert_preco || 19.7) ? linha(C.g_dm_cert_ultima) : '';
     // em que pé está a turma da pessoa
     const j = janela(turmaDo(lead, cfg), cfg), t = agora();
     if (t < j.libera(1)) { const d = new Date(j.libera(1) - 3 * 3600e3); v.linha_modulo = `As aulas começam ${DIAS[d.getUTCDay()]}, ${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}, às ${(cfg.aula_hora || '08:00').replace(':00', 'h').replace(/^0/, '')}. O aviso de cada módulo chega no grupo.`; }
@@ -134,9 +143,13 @@ async function proximo() {
 async function resultado(b) {
   const id = Number(b.id);
   if (!Number.isInteger(id)) return { ok: false };
-  const dm = await db.one('sdb_wa_dm', `select=id,tentativas,status&id=eq.${id}`);
+  const dm = await db.one('sdb_wa_dm', `select=id,tentativas,status,lead_id,texto&id=eq.${id}`);
   if (!dm || dm.status !== 'pendente') return { ok: true };
-  if (b.ok) await db.update('sdb_wa_dm', `id=eq.${id}`, { status: 'enviado', enviado_em: agoraIso(), erro: null, msg_id: txt(b.msg_id, 120) || null });
+  if (b.ok) {
+    await db.update('sdb_wa_dm', `id=eq.${id}`, { status: 'enviado', enviado_em: agoraIso(), erro: null, msg_id: txt(b.msg_id, 120) || null });
+    // a mensagem levou o link da última chance do certificado: o link passa a valer (10 min contados quando abrir)
+    if (dm.lead_id && /[?&]oferta=1/.test(dm.texto || '')) await logEvento('cert_uc_liberada', { lead_id: dm.lead_id, chave: `cert_uc_liberada:${dm.lead_id}` });
+  }
   else await db.update('sdb_wa_dm', `id=eq.${id}`, { status: (dm.tentativas || 0) >= 3 ? 'falha' : 'pendente', erro: txt(b.erro || 'erro', 200) });
   return { ok: true };
 }

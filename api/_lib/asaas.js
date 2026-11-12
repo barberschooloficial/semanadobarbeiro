@@ -37,10 +37,11 @@ function hojeMais(dias) {
 }
 
 // Cobrança avulsa: Pix, boleto ou cartão (o cliente escolhe na fatura)
-async function cobranca({ lead, cpf, valor, descricao, referencia, successUrl }) {
+async function cobranca({ lead, cpf, valor, descricao, referencia, successUrl, soPix = false, vence = null }) {
   const customer = await garanteCliente(lead, cpf);
   const corpo = {
-    customer, billingType: 'UNDEFINED', value: Number(valor), dueDate: hojeMais(1),
+    // Preço promocional: só Pix (dá para cancelar na hora certa; boleto pago no banco leva dias para compensar)
+    customer, billingType: soPix ? 'PIX' : 'UNDEFINED', value: Number(valor), dueDate: vence || hojeMais(1),
     description: descricao, externalReference: referencia,
     callback: successUrl ? { successUrl, autoRedirect: true } : undefined,
   };
@@ -86,4 +87,9 @@ async function situacao(paymentId) {
   return { pago: ['RECEIVED', 'CONFIRMED', 'RECEIVED_IN_CASH'].includes(s), cancelado: ['REFUNDED', 'DELETED'].includes(s) || !!p?.deleted, status: s };
 }
 
-module.exports = { pix, cobranca, assinatura, situacao };
+// Exclui uma cobrança ainda não paga (preço promocional que venceu). Não é estorno: não mexe em dinheiro recebido.
+async function cancelar(paymentId) {
+  return asaas(`/payments/${encodeURIComponent(paymentId)}`, { method: 'DELETE' });
+}
+
+module.exports = { pix, cobranca, assinatura, situacao, cancelar };

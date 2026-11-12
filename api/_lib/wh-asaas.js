@@ -48,6 +48,9 @@ module.exports = handler(['GET', 'POST'], async (req, res) => {
   if (!lead || !produto) return send(res, 200, { ok: true, semLead: true });
 
   const pago = PAGO.includes(b.event);
+  // Exclusão/estorno de uma cobrança antiga (ex.: Pix promocional que venceu e foi trocado) não mexe na cobrança atual
+  const atual = produto === 'cert' ? lead.cert_payment_id : lead.barberhub_payment_id;
+  if (!pago && atual !== p.id && (!p.subscription || atual !== p.subscription)) return send(res, 200, { ok: true, antiga: true });
   const agora = new Date().toISOString();
   if (produto === 'cert') {
     await db.update('sdb_leads', `id=eq.${lead.id}`, pago ? { cert_status: 'pago', cert_paid_at: agora } : { cert_status: 'cancelado' });

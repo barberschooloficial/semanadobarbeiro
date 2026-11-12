@@ -125,10 +125,12 @@ Aproveite cada aula e bons estudos! 💈` },
     texto: 'Não encontrei um cadastro com este número. Se ainda não fez, é por aqui que você recebe as 10 aulas grátis: semanadobarbeiro.com.br' },
   { id: 'g_dm_cert_pago', dm: true, titulo: 'Privado: linha para quem já comprou o certificado', dica: 'Entra em {{linha_certificado}}.',
     texto: 'Seu *Certificado de Participação* já está garantido ✅. Ele aparece no app assim que você concluir as 10 aulas.' },
-  { id: 'g_dm_cert_pendente', dm: true, titulo: 'Privado: linha para quem gerou o certificado e não pagou', dica: 'Entra em {{linha_certificado}}. Use {{cert_link}}.',
-    texto: 'Vi que você começou a emitir o certificado e o pagamento ainda não caiu. Se quiser concluir, é por aqui: {{cert_link}}' },
-  { id: 'g_dm_cert_nao', dm: true, titulo: 'Privado: linha para quem não comprou o certificado', dica: 'Entra em {{linha_certificado}}. Escreva só "-" para não falar do certificado. Use {{cert_link}} e {{cert_preco}}.',
-    texto: 'Ah, e se quiser comprovar que fez a Semana, o certificado é opcional (R$ {{cert_preco}}) e você emite pelo app.' },
+  { id: 'g_dm_cert_pendente', dm: true, titulo: 'Privado: certificado gerado e não pago (nas primeiras 24 h)', dica: 'Entra em {{linha_certificado}}. Variáveis: {{cert_cheio}}, {{cert_preco}}, {{prazo}} (ex.: hoje às 21h40), {{cert_link}}.',
+    texto: 'Vi que você gerou o Pix do certificado e ainda não pagou. Ele está de ~R$ {{cert_cheio}}~ por *R$ {{cert_preco}}* só até {{prazo}}. Depois volta para R$ {{cert_cheio}}. Para pagar agora: {{cert_link}}' },
+  { id: 'g_dm_cert_nao', dm: true, titulo: 'Privado: certificado não comprado (nas primeiras 24 h)', dica: 'Entra em {{linha_certificado}}. Escreva só "-" para não falar do certificado. Variáveis: {{cert_cheio}}, {{cert_preco}}, {{prazo}}, {{cert_link}}.',
+    texto: 'Ah, e se quiser comprovar que fez a Semana, o certificado é opcional e está de ~R$ {{cert_cheio}}~ por *R$ {{cert_preco}}* só até {{prazo}}, no Pix: {{cert_link}}' },
+  { id: 'g_dm_cert_ultima', dm: true, titulo: 'Privado: última chance do certificado (depois das 24 h)', dica: 'Entra em {{linha_certificado}} para quem passou das 24 h sem pagar. O link segura o preço por {{minutos}} min depois de aberto e o Pix não pago nesse tempo é cancelado. Escreva só "-" para não oferecer. Variáveis: {{cert_cheio}}, {{cert_preco}}, {{minutos}}, {{oferta_link}}.',
+    texto: 'O preço especial do certificado já acabou, mas separei uma *última chance* só para você: de ~R$ {{cert_cheio}}~ por *R$ {{cert_preco}}*. O valor fica reservado por *{{minutos}} minutos* a partir do momento em que você abrir este link, e o Pix precisa ser pago nesse tempo: {{oferta_link}}' },
 ];
 
 module.exports = { COPIES_GRUPO };
