@@ -31,8 +31,9 @@
     <h3 style="margin-bottom:4px">Quer também um certificado?</h3>
     <p class="small muted">Só se você quiser comprovar que fez a Semana do Barbeiro. As aulas continuam grátis com ou sem ele.</p>
     <div class="cert-linha">
-      <div><div class="rotulo">Certificado de Participação</div><div class="price" style="font-size:2.4rem">R$ 19,70</div><div class="small muted">pagamento único · Pix na hora, cartão ou boleto</div></div>
+      <div><div class="rotulo">Certificado de Participação</div><div class="price" style="font-size:2.4rem" id="preco">R$ 19,70</div><div class="small muted" id="precoSub">pagamento único · Pix na hora, cartão ou boleto</div></div>
     </div>
+    <div class="countdown claro" id="cdCert" style="margin:10px 0 0" hidden></div>
     <ul class="list-ok" style="margin-top:12px">
       <li>Certificado digital com o seu nome, emitido pela Barber School</li>
       <li>Lista das 10 aulas e a carga horária da semana</li>
@@ -44,7 +45,7 @@
       <p class="erro" id="erro"></p>
     </form>
     <div class="pix" id="pix" hidden>
-      <div class="pix-cab"><span class="pix-selo">PIX</span><b>Pague R$ 19,70 pelo app do seu banco</b></div>
+      <div class="pix-cab"><span class="pix-selo">PIX</span><b>Pague <span data-preco>R$ 19,70</span> pelo app do seu banco</b></div>
       <img id="pixQr" alt="QR Code Pix" width="198" height="198">
       <p class="pix-tempo" id="pixTempo" hidden></p>
       <p class="small muted" style="margin:0 0 6px">Ou copie o código Pix e cole na opção <b>Pix copia e cola</b>:</p>
@@ -67,6 +68,25 @@
   document.getElementById('nao').href = '/obrigado?t=' + t;
   const cpf = document.getElementById('cpf'); maskCpf(cpf);
   const $ = (id) => document.getElementById(id);
+  const brl = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  let preco = null, textoBtn = '';
+  // Preço atual: de R$ 47,70 por R$ 19,70 nas primeiras 24 h do cadastro (só Pix), com contagem regressiva
+  function pintaPreco(p) {
+    if (!p) return; preco = p;
+    document.querySelectorAll('[data-preco]').forEach(e => { e.textContent = brl(p.valor); });
+    $('preco').innerHTML = p.promo ? `<s style="font-size:1.4rem;opacity:.55;margin-right:8px">${brl(p.cheio)}</s>${brl(p.valor)}` : brl(p.valor);
+    $('precoSub').textContent = p.promo ? `pagamento único · preço das primeiras 24 horas, só no Pix · depois ${brl(p.cheio)}` : 'pagamento único · Pix na hora, cartão ou boleto';
+    $('btn').textContent = textoBtn = `Quero o certificado por ${brl(p.valor)}`;
+    const cd = $('cdCert');
+    if (p.promo && p.ate) {
+      cd.hidden = false;
+      const fim = Date.parse(p.ate), dois = (n) => String(n).padStart(2, '0');
+      const pinta = () => { const r = Math.max(0, fim - Date.now()); const h = Math.floor(r / 3600e3), m = Math.floor(r % 3600e3 / 60e3), s = Math.floor(r % 60e3 / 1e3);
+        cd.innerHTML = `<div><b>${dois(h)}</b><span>horas</span></div><div><b>${dois(m)}</b><span>min</span></div><div><b>${dois(s)}</b><span>seg</span></div>`; if (!r) { clearInterval(tc); location.reload(); } };
+      const tc = setInterval(pinta, 1000); pinta();
+    } else cd.hidden = true;
+  }
+  api('certificado?t=' + t).then(r => { if (r.status === 'pago') return sdb.ir('/obrigado?t=' + t + '&pago=1'); pintaPreco(r.preco); }).catch(() => {});
 
   // Contador até o Pix vencer (o Asaas devolve "AAAA-MM-DD HH:MM:SS" no horário de Brasília)
   let tempoTimer = null;
@@ -89,6 +109,8 @@
     $('pixQr').src = 'data:image/png;base64,' + r.pix.qr;
     $('pixCopia').textContent = r.pix.copia;
     $('pixOutro').href = r.invoiceUrl;
+    if (r.preco) pintaPreco(r.preco);
+    $('pixOutro').hidden = !!(r.preco && r.preco.promo); // preço promocional: só Pix
     contador(r.pix.expira, $('pixTempo'));
     $('pixCopiar').onclick = async () => {
       try { await navigator.clipboard.writeText(r.pix.copia); sdb.toast('Código Pix copiado'); }
@@ -109,12 +131,12 @@
     e.preventDefault(); erro.textContent = ''; btn.disabled = true; btn.textContent = 'Gerando pagamento...';
     try {
       const r = await api('certificado', { method: 'POST', body: { token: t, cpf: cpf.value } });
-      pixel('InitiateCheckout', { value: 19.70, currency: 'BRL', content_name: 'Certificado Semana do Barbeiro' });
+      pixel('InitiateCheckout', { value: Number(r.preco?.valor || preco?.valor || 19.7), currency: 'BRL', content_name: 'Certificado Semana do Barbeiro' });
       if (r.pago) { sdb.ir('/obrigado?t=' + t + '&pago=1'); return; }
       if (!r.pix) { sdb.ir(r.invoiceUrl); return; } // conta sem chave Pix: vai para a fatura do Asaas
       mostrarPix(r);
     } catch (err) {
-      erro.textContent = err.message; btn.disabled = false; btn.textContent = 'Quero o certificado por R$ 19,70';
+      erro.textContent = err.message; btn.disabled = false; btn.textContent = textoBtn || 'Quero o certificado';
     }
   });
 })();
