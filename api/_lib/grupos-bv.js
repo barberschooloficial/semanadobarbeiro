@@ -63,7 +63,7 @@ async function entrou(b) {
     const chave = `bv:${pn || id}`;
     try {
       await db.insert('sdb_wa_dm', {
-        chave, grupo_id: grupo, para: pn ? `${pn}@c.us` : id, pn, lead_id: lead?.id || null,
+        chave, tipo: 'bv', grupo_id: grupo, para: pn ? `${pn}@c.us` : id, pn, lead_id: lead?.id || null,
         nome_wa: txt(p.nome, 60) || null, status: 'pendente', agendar_em: new Date(dentroDoHorario(base, cfg)).toISOString(),
       });
       n++;
@@ -72,6 +72,23 @@ async function entrou(b) {
   }
   if (n) await logEvento('wa_bv_fila', { payload: { grupo: destino.nome, novos: n } }).catch(() => {});
   return { ok: true, na_fila: n };
+}
+
+// Lembrete do certificado: 5 min depois de gerar a cobrança, se ainda não pagou, a Bia chama no WhatsApp.
+// Fora do horário permitido vai para a próxima abertura (e só sai se a cobrança ainda estiver em aberto).
+async function lembreteCert(lead, paymentId) {
+  const cfg = await config();
+  if (cfg.wa_bv_ativo === '0' || cfg.cert_lembrete_ativo === '0' || !lead?.whatsapp || !paymentId) return null;
+  // no máximo 2 lembretes por pessoa (cada cobrança nova poderia gerar outro)
+  const ja = await db.select('sdb_wa_dm', `select=id&tipo=eq.cert&lead_id=eq.${lead.id}&limit=2`).catch(() => []);
+  if (ja.length >= 2) return null;
+  const min = Number(cfg.cert_lembrete_min || 5);
+  try {
+    return await db.insert('sdb_wa_dm', {
+      chave: `cert:${paymentId}`, tipo: 'cert', grupo_id: null, para: `${lead.whatsapp}@c.us`, pn: lead.whatsapp, lead_id: lead.id,
+      status: 'pendente', agendar_em: new Date(dentroDoHorario(agora() + min * 60e3, cfg)).toISOString(),
+    });
+  } catch (e) { if (e.code !== '23505') throw e; return null; }
 }
 
 // Primeiro nome legível: do cadastro ou do nome do WhatsApp (só letras)
@@ -97,8 +114,11 @@ async function montar(dm, cfg) {
     const reais = (n) => Number(n).toFixed(2).replace('.', ',');
     Object.assign(v, { cert_preco: reais(p.promo ? p.valor : Number(cfg.cert_preco || 19.7)), cert_cheio: reais(p.cheio), minutos: String(Number(cfg.cert_ultima_min || 10)), oferta_link: `${app}&comprar=certificado&oferta=1` });
     if (p.ate) { const a = new Date(p.ate - 3 * 3600e3), h = new Date(agora() - 3 * 3600e3); v.prazo = `${a.getUTCDate() === h.getUTCDate() ? 'hoje' : 'amanhã'} às ${a.getUTCHours()}h${String(a.getUTCMinutes()).padStart(2, '0')}`; }
+    v.cert_valor = reais(Number(lead.cert_valor) || p.valor);
+    v.linha_prazo = p.promo && v.prazo ? `Ele está de ~R$ ${v.cert_cheio}~ por *R$ ${v.cert_preco}* só até ${v.prazo}. Depois volta para R$ ${v.cert_cheio}.` : '';
     const jaUsou = p.fase === 'cheio' && await db.one('sdb_eventos', `select=id&tipo=eq.cert_uc_aberta&lead_id=eq.${lead.id}`).catch(() => null);
-    v.linha_certificado = lead.cert_status === 'pago' ? linha(C.g_dm_cert_pago)
+    const lembreteRecente = dm.tipo !== 'cert' && await db.one('sdb_wa_dm', `select=id&tipo=eq.cert&lead_id=eq.${lead.id}&status=eq.enviado&enviado_em=gte.${encodeURIComponent(new Date(agora() - 6 * 3600e3).toISOString())}`).catch(() => null);
+    v.linha_certificado = lembreteRecente ? '' : lead.cert_status === 'pago' ? linha(C.g_dm_cert_pago)
       : p.fase === 'promo' ? linha(lead.cert_status === 'pendente' ? C.g_dm_cert_pendente : C.g_dm_cert_nao)
       : p.fase === 'cheio' && !jaUsou && p.cheio > Number(cfg.cert_preco || 19.7) ? linha(C.g_dm_cert_ultima) : '';
     // em que pé está a turma da pessoa
@@ -112,7 +132,7 @@ async function montar(dm, cfg) {
   v.linha_suporte = suporte && meu && !variantes(meu).some(x => variantes(suporte).includes(x)) ? `é só me chamar no suporte: ${SITE_URL().replace(/^https?:\/\//, '')}/suporte` : 'é só me responder por aqui';
   // as linhas também podem ter variáveis ({{cert_link}}, {{cert_preco}}, {{nome}})
   for (const k of Object.keys(v)) if (k.startsWith('linha_')) v[k] = preencher(v[k], v);
-  let texto = preencher(linha(C.g_dm_bv), v);
+  let texto = preencher(linha(dm.tipo === 'cert' ? C.g_dm_cert_lembrete : C.g_dm_bv), v);
   if (!v.nome) texto = texto.replace(/^Oi, ?!/, 'Oi!'); // sem nome: "Oi! Tudo bem?"
   // linhas vazias somem sem deixar buraco
   return texto.split(/\n{2,}/).map(p => p.trim()).filter(Boolean).join('\n\n').slice(0, 4000);
@@ -130,8 +150,20 @@ async function proximo() {
   if (enviadosHoje.length >= limite) return null;
   const travado = new Date(t - 5 * 60e3).toISOString();
   // a que está sendo enviada agora (tentada há menos de 5 min) não volta para a fila
-  const dm = (await db.select('sdb_wa_dm', `select=*&status=eq.pendente&agendar_em=lte.${encodeURIComponent(agoraIso())}&order=agendar_em.asc&limit=10`))
-    .find(d => !d.tentado_em || Date.parse(d.tentado_em) < Date.parse(travado));
+  const fila = (await db.select('sdb_wa_dm', `select=*&status=eq.pendente&agendar_em=lte.${encodeURIComponent(agoraIso())}&order=agendar_em.asc&limit=10`))
+    .filter(d => !d.tentado_em || Date.parse(d.tentado_em) < Date.parse(travado));
+  let dm = null;
+  for (const d of fila) {
+    if (d.tipo === 'cert') {
+      // lembrete do certificado: só se aquela cobrança continua em aberto (pagou, expirou ou trocou: descarta)
+      const l = d.lead_id ? await db.one('sdb_leads', `select=cert_status,cert_payment_id&id=eq.${d.lead_id}`) : null;
+      if (!l || l.cert_status !== 'pendente' || `cert:${l.cert_payment_id}` !== d.chave) { await db.update('sdb_wa_dm', `id=eq.${d.id}`, { status: 'cancelado', erro: 'pagou ou a cobrança mudou' }); continue; }
+      // a boas-vindas da Bia já falou do certificado há pouco: não manda as duas
+      const bv = await db.one('sdb_wa_dm', `select=id&tipo=eq.bv&lead_id=eq.${d.lead_id}&status=eq.enviado&enviado_em=gte.${encodeURIComponent(new Date(t - 6 * 3600e3).toISOString())}`).catch(() => null);
+      if (bv) { await db.update('sdb_wa_dm', `id=eq.${d.id}`, { status: 'cancelado', erro: 'boas-vindas recente já falou do certificado' }); continue; }
+    }
+    dm = d; break;
+  }
   if (!dm) return null;
   // passou de 2 dias na fila (computador desligado): a boas-vindas perde o sentido
   if (t - Date.parse(dm.created_at) > 2 * 864e5) { await db.update('sdb_wa_dm', `id=eq.${dm.id}`, { status: 'expirado' }); return null; }
@@ -161,13 +193,13 @@ async function resumo() {
   const [env, fila, ult] = await Promise.all([
     db.select('sdb_wa_dm', `select=id&status=eq.enviado&enviado_em=gte.${encodeURIComponent(desde)}&limit=1000`),
     db.select('sdb_wa_dm', 'select=id&status=eq.pendente&limit=1000'),
-    db.select('sdb_wa_dm', 'select=pn,nome_wa,status,erro,enviado_em,created_at&order=id.desc&limit=4'),
+    db.select('sdb_wa_dm', 'select=pn,nome_wa,tipo,status,erro,enviado_em,created_at&order=id.desc&limit=4'),
   ]).catch(() => [[], [], []]);
   return {
     ativo: cfg.wa_bv_ativo !== '0', hoje: env.length, fila: fila.length, limite: Number(cfg.wa_bv_limite_dia || 60),
     horario: `${cfg.wa_bv_inicio || '08:00'}–${cfg.wa_bv_fim || '21:00'}`,
-    ultimos: ult.map(u => ({ quem: u.nome_wa || (u.pn ? `+${u.pn}` : 'contato'), status: u.status, erro: u.erro, em: u.enviado_em || u.created_at })),
+    ultimos: ult.map(u => ({ quem: (u.tipo === 'cert' ? 'lembrete certificado · ' : '') + (u.nome_wa || (u.pn ? `+${u.pn}` : 'contato')), status: u.status, erro: u.erro, em: u.enviado_em || u.created_at })),
   };
 }
 
-module.exports = { entrou, proximo, resultado, resumo, montar, variantes, dentroDoHorario };
+module.exports = { entrou, proximo, resultado, resumo, montar, variantes, dentroDoHorario, lembreteCert };

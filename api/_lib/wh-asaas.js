@@ -53,7 +53,7 @@ module.exports = handler(['GET', 'POST'], async (req, res) => {
   if (!pago && atual !== p.id && (!p.subscription || atual !== p.subscription)) return send(res, 200, { ok: true, antiga: true });
   const agora = new Date().toISOString();
   if (produto === 'cert') {
-    await db.update('sdb_leads', `id=eq.${lead.id}`, pago ? { cert_status: 'pago', cert_paid_at: agora } : { cert_status: 'cancelado' });
+    await db.update('sdb_leads', `id=eq.${lead.id}`, pago ? { cert_status: 'pago', cert_paid_at: agora, ...(p.billingType ? { cert_forma: p.billingType } : {}), ...(p.value ? { cert_valor: p.value } : {}) } : { cert_status: 'cancelado' });
     if (pago) await comTimeout(manychat.sync(lead, { tags: ['sdb_cert_pago'] }), 4000);
     if (pago) await comTimeout(meta.evento('Purchase', { lead, eventId: `cert_${lead.id}`, valor: p.value, url: `${require('./http').SITE_URL()}/certificado` }), 3000);
   } else {

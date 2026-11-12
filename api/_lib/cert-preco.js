@@ -1,5 +1,5 @@
 // Preço do certificado (regra única para site, app, cobrança e mensagens):
-// - nas primeiras 24 h depois do cadastro: de R$ 47,70 por R$ 19,70 (só Pix);
+// - nas primeiras 24 h depois do cadastro: de R$ 47,70 por R$ 19,70 (Pix ou cartão; boleto nunca);
 // - depois: R$ 47,70;
 // - última chance: quem recebeu o link da Bia depois das 24 h tem 10 min, contados de quando abre o link,
 //   para pagar R$ 19,70 no Pix. Pix promocional não pago no prazo é excluído no Asaas (cert-conferir.expirar).

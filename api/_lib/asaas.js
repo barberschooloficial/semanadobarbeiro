@@ -37,11 +37,11 @@ function hojeMais(dias) {
 }
 
 // Cobrança avulsa: Pix, boleto ou cartão (o cliente escolhe na fatura)
-async function cobranca({ lead, cpf, valor, descricao, referencia, successUrl, soPix = false, vence = null }) {
+async function cobranca({ lead, cpf, valor, descricao, referencia, successUrl, forma = 'UNDEFINED', vence = null }) {
   const customer = await garanteCliente(lead, cpf);
   const corpo = {
-    // Preço promocional: só Pix (dá para cancelar na hora certa; boleto pago no banco leva dias para compensar)
-    customer, billingType: soPix ? 'PIX' : 'UNDEFINED', value: Number(valor), dueDate: vence || hojeMais(1),
+    // forma: PIX, CREDIT_CARD, BOLETO ou UNDEFINED (o cliente escolhe na fatura). O certificado usa PIX ou CREDIT_CARD, nunca boleto.
+    customer, billingType: forma, value: Number(valor), dueDate: vence || hojeMais(1),
     description: descricao, externalReference: referencia,
     callback: successUrl ? { successUrl, autoRedirect: true } : undefined,
   };
@@ -84,7 +84,15 @@ async function assinatura({ lead, cpf, valor, descricao, referencia }) {
 async function situacao(paymentId) {
   const p = await asaas(`/payments/${encodeURIComponent(paymentId)}`);
   const s = String(p?.status || '');
-  return { pago: ['RECEIVED', 'CONFIRMED', 'RECEIVED_IN_CASH'].includes(s), cancelado: ['REFUNDED', 'DELETED'].includes(s) || !!p?.deleted, status: s };
+  return { pago: ['RECEIVED', 'CONFIRMED', 'RECEIVED_IN_CASH'].includes(s), cancelado: ['REFUNDED', 'DELETED'].includes(s) || !!p?.deleted, status: s, forma: p?.billingType || null, invoiceUrl: p?.invoiceUrl || null };
+}
+
+// Troca a forma de pagamento de uma cobrança ainda não paga (PIX <-> CREDIT_CARD). O Asaas exige valor e vencimento juntos.
+async function trocarForma(paymentId, forma) {
+  const p = await asaas(`/payments/${encodeURIComponent(paymentId)}`);
+  if (p.billingType === forma) return { invoiceUrl: p.invoiceUrl, forma };
+  const n = await asaas(`/payments/${encodeURIComponent(paymentId)}`, { method: 'PUT', body: { billingType: forma, value: p.value, dueDate: p.dueDate } });
+  return { invoiceUrl: n.invoiceUrl || p.invoiceUrl, forma: n.billingType || forma };
 }
 
 // Exclui uma cobrança ainda não paga (preço promocional que venceu). Não é estorno: não mexe em dinheiro recebido.
@@ -92,4 +100,4 @@ async function cancelar(paymentId) {
   return asaas(`/payments/${encodeURIComponent(paymentId)}`, { method: 'DELETE' });
 }
 
-module.exports = { pix, cobranca, assinatura, situacao, cancelar };
+module.exports = { pix, cobranca, assinatura, situacao, cancelar, trocarForma };

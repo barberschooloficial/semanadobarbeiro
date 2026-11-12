@@ -128,9 +128,19 @@ Aproveite cada aula e bons estudos! 💈` },
   { id: 'g_dm_cert_pendente', dm: true, titulo: 'Privado: certificado gerado e não pago (nas primeiras 24 h)', dica: 'Entra em {{linha_certificado}}. Variáveis: {{cert_cheio}}, {{cert_preco}}, {{prazo}} (ex.: hoje às 21h40), {{cert_link}}.',
     texto: 'Vi que você gerou o Pix do certificado e ainda não pagou. Ele está de ~R$ {{cert_cheio}}~ por *R$ {{cert_preco}}* só até {{prazo}}. Depois volta para R$ {{cert_cheio}}. Para pagar agora: {{cert_link}}' },
   { id: 'g_dm_cert_nao', dm: true, titulo: 'Privado: certificado não comprado (nas primeiras 24 h)', dica: 'Entra em {{linha_certificado}}. Escreva só "-" para não falar do certificado. Variáveis: {{cert_cheio}}, {{cert_preco}}, {{prazo}}, {{cert_link}}.',
-    texto: 'Ah, e se quiser comprovar que fez a Semana, o certificado é opcional e está de ~R$ {{cert_cheio}}~ por *R$ {{cert_preco}}* só até {{prazo}}, no Pix: {{cert_link}}' },
+    texto: 'Ah, e se quiser comprovar que fez a Semana, o certificado é opcional e está de ~R$ {{cert_cheio}}~ por *R$ {{cert_preco}}* só até {{prazo}}, no Pix ou no cartão: {{cert_link}}' },
   { id: 'g_dm_cert_ultima', dm: true, titulo: 'Privado: última chance do certificado (depois das 24 h)', dica: 'Entra em {{linha_certificado}} para quem passou das 24 h sem pagar. O link segura o preço por {{minutos}} min depois de aberto e o Pix não pago nesse tempo é cancelado. Escreva só "-" para não oferecer. Variáveis: {{cert_cheio}}, {{cert_preco}}, {{minutos}}, {{oferta_link}}.',
     texto: 'O preço especial do certificado já acabou, mas separei uma *última chance* só para você: de ~R$ {{cert_cheio}}~ por *R$ {{cert_preco}}*. O valor fica reservado por *{{minutos}} minutos* a partir do momento em que você abrir este link, e o Pix precisa ser pago nesse tempo: {{oferta_link}}' },
+  { id: 'g_dm_cert_lembrete', dm: true, titulo: 'Privado: lembrete do certificado (5 min sem pagar)', dica: 'Sai pela extensão alguns minutos depois de a pessoa gerar a cobrança, só se ainda não pagou (no horário das boas-vindas). Variáveis: {{nome}}, {{cert_valor}}, {{linha_prazo}}, {{cert_link}}, {{linha_suporte}}.',
+    texto: `Oi, {{nome}}! Aqui é a *Bia, do suporte da Semana do Barbeiro* 😊
+
+Vi que você gerou o pagamento do seu *Certificado de Participação* (R$ {{cert_valor}}) e ele ainda não apareceu aqui.
+
+{{linha_prazo}}
+
+Para concluir no Pix ou no cartão, é só abrir: {{cert_link}}
+
+Se travou em alguma parte do pagamento, {{linha_suporte}} que eu te ajudo.` },
 ];
 
 module.exports = { COPIES_GRUPO };
