@@ -19,6 +19,10 @@
       "destination": "/api/webhook?de=hotmart"
     },
     {
+      "source": "/api/asaas-saque",
+      "destination": "/api/webhook?de=asaas-saque"
+    },
+    {
       "source": "/",
       "has": [
         {
