@@ -464,6 +464,7 @@
           <div><span class="rotulo">Recebem avisos</span><div id="gRAtivos" class="small"></div></div>
           <div><span class="rotulo">Fila</span><div id="gRFila" class="small"></div></div>
           <div><span class="rotulo">Últimos envios</span><div id="gRUlt" class="small"></div></div>
+          <div><span class="rotulo">Boas-vindas no privado (Bia)</span><div id="gRBv" class="small"></div></div>
         </div>
       </div>
 
@@ -1015,7 +1016,7 @@
     const ehEmail = canal === 'email';
     corpo.innerHTML = `${ehEmail ? `<div class="field" style="margin:0"><label>Assunto</label><input type="text" data-a value="${esc(c.assunto || '')}" maxlength="200"></div>` : ''}
       <div class="field" style="margin:0"><label>Texto</label><textarea data-t maxlength="${ehEmail ? 20000 : 4000}">${esc(c.texto || '')}</textarea>
-      <p class="small muted dica" style="margin:6px 0 0">${ehEmail ? 'Use <code>{{nome}}</code> e <code>{{app_link}}</code>; <code>**negrito**</code>; uma linha só com <code>[Texto](link)</code> vira botão.' : 'Formatação do WhatsApp: <code>*negrito*</code>, <code>_itálico_</code>, <code>~riscado~</code>.'}</p></div>
+      <p class="small muted dica" style="margin:6px 0 0">${c.dica ? esc(c.dica) + '<br>' : ''}${ehEmail ? 'Use <code>{{nome}}</code> e <code>{{app_link}}</code>; <code>**negrito**</code>; uma linha só com <code>[Texto](link)</code> vira botão.' : 'Formatação do WhatsApp: <code>*negrito*</code>, <code>_itálico_</code>, <code>~riscado~</code>.'}</p></div>
       <div class="msg-acoes"><button class="btn sm" type="button" data-s>Salvar</button>${ehEmail ? '<button class="btn sm ghost" type="button" data-p>Ver prévia</button><input type="email" placeholder="seu@email.com" style="flex:1 1 160px;width:auto;padding:10px 14px" data-e><button class="btn sm ghost" type="button" data-test>Enviar teste</button>' : '<button class="btn sm ghost" type="button" data-p>Ver prévia</button>'}${c.ajustada ? '<button class="btn sm ghost" type="button" data-r style="color:var(--vermelho)">Voltar ao texto original</button>' : ''}</div>
       <div data-prev hidden></div>`;
     corpo.appendChild(erro);
@@ -1054,6 +1055,10 @@
     const f = r.fila;
     $('gRFila').innerHTML = (f.agora ? `<b>${f.agora}</b> saindo agora (${f.pendentes_agora} envio(s) pendente(s))` : 'Nada saindo agora.')
       + (f.proximos.length ? `<br>Próximos:<br>${f.proximos.map(a => `${esc(q(a.agendar_em))} · ${esc(a.titulo)}`).join('<br>')}` : '<br><span class="muted">Nenhum programado.</span>');
+    const bv = r.boas_vindas;
+    $('gRBv').innerHTML = !bv ? '—' : !bv.ativo ? '<span class="muted">Desligadas (aba Configurações)</span>'
+      : `<b>${bv.hoje}</b> enviada(s) hoje de ${bv.limite} · <b>${bv.fila}</b> na fila<br><span class="muted">Sai das ${esc(bv.horario)}, para quem entra nos grupos marcados como "Semana do Barbeiro"</span>`
+        + (bv.ultimos.length ? '<br>' + bv.ultimos.map(u => `${u.status === 'enviado' ? '✓' : u.status === 'pendente' ? '·' : '✗'} ${esc(u.quem)} <span class="muted">· ${esc(q(u.em))}${u.erro ? ' · ' + esc(u.erro) : ''}</span>`).join('<br>') : '');
     $('gRUlt').innerHTML = r.ultimos.length ? r.ultimos.map(u => `${u.status === 'enviado' ? '✓' : '✗'} ${esc(u.destino)} <span class="muted">· ${esc(q(u.em))}</span>${u.erro ? `<br><span class="muted">${esc(u.erro)}</span>` : ''}`).join('<br>') : 'Nenhum envio ainda.';
   }
 
