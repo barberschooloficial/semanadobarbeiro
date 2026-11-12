@@ -449,8 +449,9 @@
     } else if (c.status === 'pago') {
       box.innerHTML = `<span class="rotulo">Certificado</span><h3 style="margin-top:6px">Pago ✓</h3><p class="small muted">Ele libera aqui quando você concluir as 10 aulas (${s.progresso.assistidas}/${s.progresso.total}). Ao terminar cada aula, toque em "Concluí esta aula".</p>`;
     } else if (c.status === 'pendente' && c.invoice_url) {
-      box.innerHTML = `<span class="rotulo">Certificado</span><h3 style="margin-top:6px">Pagamento em aberto</h3><p class="small muted">Assim que o pagamento cair, ele fica marcado como pago aqui.</p><a class="btn green" href="${esc(c.invoice_url)}">Pagar ${brl(c.preco)}</a><button class="btn ghost" style="margin-top:8px" id="btnRecarregar">Já paguei, atualizar</button>`;
+      box.innerHTML = `<span class="rotulo">Certificado</span><h3 style="margin-top:6px">Pagamento em aberto</h3><p class="small muted">Assim que o pagamento cair, ele fica marcado como pago aqui.</p><button class="btn green" id="btnPagarCert">Pagar ${brl(c.preco)} com Pix</button><button class="btn ghost" style="margin-top:8px" id="btnRecarregar">Já paguei, atualizar</button>`;
       $('btnRecarregar').onclick = () => carregar();
+      $('btnPagarCert').onclick = () => { abrirCpf('certificado'); cobrarCert({ token: T, origem: 'app' }); };
     } else if (s.expirou && s.curso.status !== 'pago') {
       box.innerHTML = ''; box.hidden = true; // semana encerrada sem as aulas: não dá mais para concluir as 10 aulas
     } else {
@@ -502,10 +503,45 @@
       $('cpfTitulo').textContent = `Barbeearia — ${brl(s.barberhub.preco)}${s.barberhub.ciclo === 'UNICO' ? '' : '/mês'}`;
       $('cpfTexto').textContent = 'Informe seu CPF para emitir a cobrança. Você paga com Pix, cartão ou boleto.';
     }
+    $('cpfForm').hidden = false; $('pixBox').hidden = true;
     $('mCpf').classList.add('on');
   }
-  $('cpfFechar').onclick = () => $('mCpf').classList.remove('on');
+  // ---------- Pix do certificado dentro do app ----------
+  let pixTimer = null;
+  const pararPix = () => { if (pixTimer) clearInterval(pixTimer); pixTimer = null; };
+  function mostrarPix(r) {
+    $('cpfForm').hidden = true; $('pixBox').hidden = false;
+    $('cpfTexto').textContent = 'Abra o app do seu banco e pague com Pix. Assim que o pagamento cair, o certificado fica marcado como pago aqui.';
+    $('pixValor').textContent = `Pague ${brl(estado?.certificado?.preco || 19.7)} pelo app do seu banco`;
+    $('pixQr').src = 'data:image/png;base64,' + r.pix.qr;
+    $('pixCopia').textContent = r.pix.copia;
+    $('pixOutro').href = r.invoiceUrl;
+    $('pixCopiar').onclick = async () => {
+      try { await navigator.clipboard.writeText(r.pix.copia); toast('Código Pix copiado. Cole no app do seu banco.'); }
+      catch { const rg = document.createRange(); rg.selectNodeContents($('pixCopia')); const se = getSelection(); se.removeAllRanges(); se.addRange(rg); toast('Código selecionado: copie e cole no banco.'); }
+    };
+    sdb.track('cert_pix', 'app');
+    pararPix();
+    pixTimer = setInterval(async () => {
+      if (document.hidden) return;
+      try {
+        const s = await api('certificado?t=' + T);
+        if (s.status === 'pago') { pararPix(); $('mCpf').classList.remove('on'); toast('Pagamento recebido! Certificado pago ✓', 6000); carregar(); }
+      } catch {}
+    }, 5000);
+  }
+  async function cobrarCert(body) {
+    $('cpfErro').textContent = ''; $('cpfBtn').disabled = true;
+    try {
+      const r = await api('certificado', { method: 'POST', body });
+      if (r.pago) { $('mCpf').classList.remove('on'); carregar(); return; }
+      if (r.pix && r.pix.qr) { mostrarPix(r); carregar(); return; }
+      ir(r.invoiceUrl); // conta sem chave Pix: paga na página do Asaas
+    } catch (e) { $('cpfErro').textContent = e.message; } finally { $('cpfBtn').disabled = false; }
+  }
+  $('cpfFechar').onclick = () => { pararPix(); $('mCpf').classList.remove('on'); };
   $('cpfBtn').onclick = async () => {
+    if (produtoCpf === 'certificado') { pixel('InitiateCheckout', { content_name: 'certificado' }); return cobrarCert({ token: T, cpf: $('cpf').value, origem: 'app' }); }
     $('cpfErro').textContent = ''; $('cpfBtn').disabled = true;
     try {
       const r = await api(produtoCpf, { method: 'POST', body: { token: T, cpf: $('cpf').value, origem: 'app' } });
