@@ -57,6 +57,14 @@ const CAMPOS_CFG = [
     { chave: 'wa_intervalo_min', rotulo: 'Extensão: espera mínima entre grupos (segundos)', tipo: 'int' },
     { chave: 'wa_intervalo_max', rotulo: 'Extensão: espera máxima entre grupos (segundos)', tipo: 'int' },
   ] },
+  { titulo: 'Prospecção de barbearias (Apify)', campos: [
+    { chave: 'prosp_ativo', rotulo: 'Buscar barbearias todo mês', tipo: 'bool', ajuda: 'Começa no dia 1, uma cidade por vez, e para no teto de gasto. Precisa da chave APIFY_TOKEN na Vercel.' },
+    { chave: 'prosp_cidades', rotulo: 'Cidades (separe com ponto e vírgula)', tipo: 'texto', ajuda: 'Ex.: São Paulo, SP; Curitiba, PR' },
+    { chave: 'prosp_por_cidade', rotulo: 'Barbearias por cidade no mês', tipo: 'int' },
+    { chave: 'prosp_teto_usd', rotulo: 'Teto de gasto na Apify por mês (US$)', tipo: 'num', ajuda: 'O plano grátis dá US$ 5 por mês. Deixe abaixo disso para nunca pagar.' },
+    { chave: 'prosp_contatos', rotulo: 'Buscar e-mail e Instagram no site da barbearia', tipo: 'bool', ajuda: 'Custa mais crédito por barbearia, mas sem e-mail não dá para convidar.' },
+    { chave: 'prosp_busca', rotulo: 'Termo de busca no Google Maps', tipo: 'texto' },
+  ] },
 ];
 
 const TOKEN = /^[a-f0-9]{20,64}$/;
@@ -66,7 +74,8 @@ const varsDe = (l) => ({ nome: String(l.nome || '').split(' ')[0], app_link: `${
 const slug = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 60);
 function varsContato(c, d, ch) {
   const link = `${SITE_URL()}/api/t?r=${c.token}&d=${d.id}&ch=${ch}`;
-  return { nome: String(c.nome || '').split(' ')[0] || 'barbeiro', link, app_link: link, cidade: c.cidade || '' };
+  const nome = /^barbearias/.test(String(c.lista || '')) ? String(c.nome || 'sua barbearia') : (String(c.nome || '').split(' ')[0] || 'barbeiro'); // barbearia: nome completo da empresa
+  return { nome, link, app_link: link, cidade: c.cidade || '' };
 }
 const linkSair = (l) => `${SITE_URL()}/api/disparos?acao=descadastro&t=${l.token}`;
 
@@ -136,6 +145,7 @@ async function processar(limiteMs = 40000) {
   }
   if (cfg0.grupos_auto !== '0') await G.garantirCalendario(segundaDa(agora())).catch(e => console.error('grupos', e.message));
   await require('./_lib/boasvindas').pendentes().catch(e => console.error('boas-vindas', e.message));
+  await require('./_lib/prospeccao').passo().catch(e => console.error('prospeccao', e.message));
   const t0 = Date.now();
   const resumo = [];
   const agoraIso = new Date(agora()).toISOString();
@@ -173,6 +183,7 @@ async function processar(limiteMs = 40000) {
           ref: l.id, para: l.email, assunto: preencher(d.assunto, vars(l, 'e')), texto: preencher(d.texto, vars(l, 'e')),
           descadastro: ehC ? `${SITE_URL()}/api/disparos?acao=descadastro&c=${l.token}` : linkSair(l),
           pixel: ehC ? `${SITE_URL()}/api/t?o=${l.token}` : null,
+          from: ehC && /^barbearias/.test(String(l.lista || '')) && process.env.EMAIL_FROM_CONVITE ? process.env.EMAIL_FROM_CONVITE : undefined,
         })));
         const linhas = [...r.ok.map(id => linha(id, true)), ...r.falhas.map(f => linha(f.ref, false, f.erro))];
         if (linhas.length) await db.insert(T_ENV, linhas);
@@ -288,9 +299,17 @@ module.exports = handler(['GET', 'POST'], async (req, res) => {
       { nome: 'HOTMART_HOTTOK', rotulo: 'Hotmart (venda do curso)', ok: tem('HOTMART_HOTTOK'), obs: 'libera o aluno quando a Hotmart avisa a compra' },
       { nome: 'RESEND_API_KEY', rotulo: 'Resend (e-mails)', ok: tem('RESEND_API_KEY'), obs: 'envio dos e-mails das aulas' },
       { nome: 'MANYCHAT_API_KEY', rotulo: 'ManyChat (WhatsApp 1 a 1)', ok: tem('MANYCHAT_API_KEY'), obs: 'opcional enquanto não houver canal de WhatsApp no ManyChat' },
+      { nome: 'APIFY_TOKEN', rotulo: 'Apify (busca de barbearias)', ok: tem('APIFY_TOKEN'), obs: 'Apify → Settings → API & Integrations → Personal API token' },
+      { nome: 'EMAIL_FROM_CONVITE', rotulo: 'Remetente dos convites frios', ok: tem('EMAIL_FROM_CONVITE'), obs: 'opcional: um domínio só de convites protege o domínio das aulas' },
       { nome: 'SUPABASE_SERVICE_ROLE_KEY', rotulo: 'Supabase (banco)', ok: tem('SUPABASE_SERVICE_ROLE_KEY'), obs: 'banco de dados' },
     ];
     return send(res, 200, { chaves, grupos: CAMPOS_CFG.map(g => ({ titulo: g.titulo, campos: g.campos.map(c => ({ ...c, valor: cfg[c.chave] ?? '' })) })) });
+  }
+  if (acao === 'prosp_status') return send(res, 200, await require('./_lib/prospeccao').resumo());
+  if (acao === 'prosp_rodar') {
+    const P = require('./_lib/prospeccao');
+    const r = await P.passo({ forcar: true });
+    return send(res, 200, { ok: true, r, ...(await P.resumo()) });
   }
   if (acao === 'config_salvar') {
     const campo = CAMPOS_CFG.flatMap(g => g.campos).find(c => c.chave === b.chave);
