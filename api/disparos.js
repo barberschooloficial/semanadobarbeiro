@@ -135,6 +135,7 @@ async function processar(limiteMs = 40000) {
     for (const t of [atual, ymd(Date.parse(`${atual}T12:00:00-03:00`) + 7 * DIA)]) await garantirCalendario(t, cfg0).catch(e => console.error('calendario', e.message));
   }
   if (cfg0.grupos_auto !== '0') await G.garantirCalendario(segundaDa(agora())).catch(e => console.error('grupos', e.message));
+  await require('./_lib/boasvindas').pendentes().catch(e => console.error('boas-vindas', e.message));
   const t0 = Date.now();
   const resumo = [];
   const agoraIso = new Date(agora()).toISOString();

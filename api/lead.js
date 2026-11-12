@@ -52,11 +52,8 @@ module.exports = handler(['POST'], async (req, res) => {
   if (mcId && mcId !== lead.manychat_id) await db.update('sdb_leads', `id=eq.${lead.id}`, { manychat_id: mcId });
   if (novo) {
     await logEvento('cadastro', { lead_id: lead.id, payload: { origem: lead.origem, utm_source: lead.utm_source, utm_campaign: lead.utm_campaign, turma: lead.turma_inicio } });
-    // E-mail de boas-vindas com o link pessoal (biblioteca: api/_lib/copies.js → email_boas_vindas)
-    const c = ajustar(COPIES, cfg).find(x => x.id === 'email_boas_vindas');
-    const v = { nome: lead.nome.split(' ')[0], app_link };
-    await comTimeout(mailer.enviarLote([{ ref: lead.id, para: lead.email, assunto: mailer.preencher(c.assunto, v), texto: mailer.preencher(c.texto, v), descadastro: `${SITE_URL()}/api/disparos?acao=descadastro&t=${lead.token}` }])
-      .then(r => r.ok.length && logEvento('email_boas_vindas', { lead_id: lead.id })), 4000);
+    // E-mail de boas-vindas (biblioteca: api/_lib/copies.js → email_boas_vindas). Se falhar, o agendador reenvia.
+    await comTimeout(require('./_lib/boasvindas').enviar(lead, cfg), 5000);
   }
 
   send(res, 200, { ok: true, token: lead.token, app_link, novo, turma: turmaDo(lead, cfg) });
