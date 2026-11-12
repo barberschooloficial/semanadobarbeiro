@@ -450,7 +450,7 @@
           <ol class="ext-passos" id="gPassos">
             <li>Baixe a extensão, descompacte e abra <code>chrome://extensions</code> no Chrome.</li>
             <li>Ligue o <b>Modo do desenvolvedor</b> e clique em <b>Carregar sem compactação</b> → escolha a pasta.</li>
-            <li>Clique no ícone da extensão e cole a chave <code>WA_EXT_KEY</code>: <button class="btn sm" type="button" id="gChaveCopiar">Copiar chave</button> <button class="btn sm ghost" type="button" id="gChaveVer">Mostrar</button> <code id="gChaveTxt" hidden></code></li>
+            <li>Com a extensão instalada neste Chrome, clique em <button class="btn sm green" type="button" id="gConectar">Conectar extensão</button> <span class="small" id="gConectarMsg"></span><br><span class="small muted">Ou copie a chave e cole na extensão:</span> <button class="btn sm" type="button" id="gChaveCopiar">Copiar chave</button> <button class="btn sm ghost" type="button" id="gChaveVer">Mostrar</button> <code id="gChaveTxt" hidden></code></li>
             <li>Abra <b>web.whatsapp.com</b> com o número de avisos. Os grupos, comunidades e canais aparecem aqui embaixo.</li>
           </ol>
         </div>
@@ -1068,7 +1068,14 @@
     ].map(([n, c, t]) => `<span class="canal-st ${c}"><i></i>${esc(n)}: ${esc(t)}</span>`).join('');
     $('gPassos').hidden = !!(e.online && d.destinos.length);
     pintaResumoG(d.resumo);
-    $('gChaveCopiar').disabled = $('gChaveVer').disabled = !e.chave;
+    $('gChaveCopiar').disabled = $('gChaveVer').disabled = $('gConectar').disabled = !e.chave;
+    $('gConectar').onclick = () => {
+      let ok = false;
+      const ouvir = (ev) => { if (ev.source === window && ev.data?.tipo === 'sdb-ext-ok') { ok = true; window.removeEventListener('message', ouvir); $('gConectarMsg').textContent = `Conectada (versão ${ev.data.versao}). Recarregue a aba do WhatsApp Web.`; sdb.toast('Extensão conectada'); } };
+      window.addEventListener('message', ouvir);
+      window.postMessage({ tipo: 'sdb-ext-chave', chave: e.chave }, location.origin);
+      setTimeout(() => { if (!ok) { window.removeEventListener('message', ouvir); $('gConectarMsg').textContent = 'A extensão 1.2 não respondeu neste Chrome. Instale ou atualize a extensão e recarregue esta página.'; } }, 1500);
+    };
     $('gChaveCopiar').onclick = async () => { try { await navigator.clipboard.writeText(e.chave); sdb.toast('Chave copiada. Cole na extensão.'); } catch { $('gChaveTxt').textContent = e.chave; $('gChaveTxt').hidden = false; sdb.toast('Não deu para copiar sozinho: selecione a chave e copie.'); } };
     $('gChaveVer').onclick = () => { const t = $('gChaveTxt'); t.hidden = !t.hidden; t.textContent = t.hidden ? '' : e.chave; $('gChaveVer').textContent = t.hidden ? 'Mostrar' : 'Esconder'; };
     if (!d.auto && !$('gSemanaTxt').dataset.off) { $('gSemanaTxt').dataset.off = '1'; $('gSemanaTxt').insertAdjacentHTML('beforeend', ' <b>(Automático desligado em sdb_config.grupos_auto.)</b>'); }
