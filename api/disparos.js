@@ -170,6 +170,7 @@ async function processar(limiteMs = 40000) {
   if (cfg0.grupos_auto !== '0') await G.garantirCalendario(segundaDa(agora())).catch(e => console.error('grupos', e.message));
   await require('./_lib/boasvindas').pendentes().catch(e => console.error('boas-vindas', e.message));
   await require('./_lib/prospeccao').passo().catch(e => console.error('prospeccao', e.message));
+  await require('./_lib/cert-conferir').conferirPendentes().catch(e => console.error('cert', e.message));
   const t0 = Date.now();
   const resumo = [];
   const agoraIso = new Date(agora()).toISOString();
