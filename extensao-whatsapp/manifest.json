@@ -1,0 +1,58 @@
+{
+  "manifest_version": 3,
+  "name": "Avisos Semana do Barbeiro",
+  "version": "1.4.0",
+  "description": "Envia os avisos programados no painel da Semana do Barbeiro para os grupos, comunidades e canal do WhatsApp Web, e a boas-vindas no privado para quem entra nos grupos.",
+  "icons": {
+    "16": "icone16.png",
+    "48": "icone48.png",
+    "128": "icone128.png"
+  },
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://web.whatsapp.com/*",
+    "https://app.semanadobarbeiro.com.br/*",
+    "https://semanadobarbeiro.com.br/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Avisos Semana do Barbeiro",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://web.whatsapp.com/*"
+      ],
+      "js": [
+        "config-wa.js",
+        "wppconnect-wa.js",
+        "pagina.js"
+      ],
+      "world": "MAIN",
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://web.whatsapp.com/*"
+      ],
+      "js": [
+        "ponte.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://app.semanadobarbeiro.com.br/admin*"
+      ],
+      "js": [
+        "conectar.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
