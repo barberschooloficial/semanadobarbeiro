@@ -10,6 +10,20 @@ const TOKEN_C = /^[a-f0-9]{16,40}$/;
 const agoraIso = () => new Date().toISOString();
 const slug = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 60);
 
+// O Gmail (e alguns antivírus de e-mail) baixa as imagens segundos depois da entrega, antes de a pessoa abrir.
+// Pixel chamado até 60 s depois do envio é essa leitura automática: não conta como abertura.
+const JANELA_AUTO_MS = 60e3;
+async function aberturaAutomatica(c, u) {
+  const s = Number(u.searchParams.get('s'));
+  let enviado = Number.isFinite(s) && s > 1e9 ? s * 1000 : 0;
+  if (!enviado) { // convites enviados antes da hora ir no pixel: usa a hora gravada do último envio
+    const e = await db.one('sdb_contato_envios', `select=enviado_em&contato_id=eq.${c.id}&status=eq.enviado&order=enviado_em.desc`).catch(() => null);
+    enviado = e ? Date.parse(e.enviado_em) : 0;
+  }
+  const dt = Date.now() - enviado;
+  return enviado > 0 && dt >= -5e3 && dt < JANELA_AUTO_MS;
+}
+
 async function contatoGet(req, res) {
   const u = new URL(req.url, 'http://x');
   const o = u.searchParams.get('o'), r = u.searchParams.get('r');
@@ -31,7 +45,7 @@ async function contatoGet(req, res) {
   if (o != null) {
     if (TOKEN_C.test(o)) {
       const c = await db.one('sdb_contatos', `select=id,aberto_em&token=eq.${o}`).catch(() => null);
-      if (c && !c.aberto_em) await db.update('sdb_contatos', `id=eq.${c.id}`, { aberto_em: agoraIso() }).catch(() => {});
+      if (c && !c.aberto_em && !(await aberturaAutomatica(c, u))) await db.update('sdb_contatos', `id=eq.${c.id}`, { aberto_em: agoraIso() }).catch(() => {});
     }
     res.statusCode = 200; res.setHeader('Content-Type', 'image/gif'); res.setHeader('Cache-Control', 'no-store'); return res.end(GIF);
   }

@@ -66,6 +66,9 @@ const CAMPOS_CFG = [
     { chave: 'wa_bv_limite_dia', rotulo: 'Boas-vindas: máximo por dia', tipo: 'int', ajuda: 'O que passar fica para o dia seguinte. Protege o número contra bloqueio.' },
     { chave: 'wa_bv_inicio', rotulo: 'Boas-vindas: a partir de', tipo: 'hora' },
     { chave: 'wa_bv_fim', rotulo: 'Boas-vindas: até', tipo: 'hora', ajuda: 'Quem entra fora desse horário recebe na manhã seguinte.' },
+    { chave: 'wa_palavra_ativo', rotulo: 'Bia responde quem manda "SEMANA - quero receber as aulas" no privado', tipo: 'bool', ajuda: 'É a mensagem do botão de WhatsApp da página de obrigado. A resposta sai em até 1 a 2 minutos, a qualquer hora, uma vez por pessoa por dia. Texto na aba Mensagens.' },
+    { chave: 'wa_suporte_barberschool', rotulo: 'WhatsApp do suporte da Barber School', tipo: 'texto', opcional: true, ajuda: 'Dúvidas sobre o curso completo vão para este número. A Bia nunca responde nem chama este número. Vazio usa 5551926366047; "-" desliga.' },
+    { chave: 'wa_ignorar', rotulo: 'Números que a Bia ignora', tipo: 'texto', opcional: true, ajuda: 'Equipe e parceiros, separados por vírgula. A Bia não responde nem manda boas-vindas para eles.' },
     { chave: 'email_aquecimento', rotulo: 'Aquecer o envio de convites por e-mail', tipo: 'bool', ajuda: 'Convites para listas importadas começam pequenos e dobram a cada dia (50, 100, 200...) até o teto abaixo. Protege o domínio no Resend.' },
     { chave: 'email_aquecimento_inicio', rotulo: 'Convites no primeiro dia', tipo: 'int' },
     { chave: 'email_convite_dia', rotulo: 'Teto de convites por e-mail por dia', tipo: 'int', ajuda: 'O que passar fica para o dia seguinte sozinho. E-mails das aulas para quem se cadastrou não entram nesse limite.' },
@@ -221,7 +224,7 @@ async function processar(limiteMs = 40000) {
         const r = await enviarLote(lote.map(l => ({
           ref: l.id, para: l.email, assunto: preencher(d.assunto, vars(l, 'e')), texto: preencher(d.texto, vars(l, 'e')),
           descadastro: ehC ? `${SITE_URL()}/api/disparos?acao=descadastro&c=${l.token}` : linkSair(l),
-          pixel: ehC ? `${SITE_URL()}/api/t?o=${l.token}` : null,
+          pixel: ehC ? `${SITE_URL()}/api/t?o=${l.token}&s=${Math.floor(Date.now() / 1000)}` : null, // s = hora do envio (filtra a abertura automática do Gmail)
           from: ehC && /^barbearias/.test(String(l.lista || '')) && process.env.EMAIL_FROM_CONVITE ? process.env.EMAIL_FROM_CONVITE : undefined,
         })));
         const linhas = [...r.ok.map(id => linha(id, true, null, r.ids?.[id])), ...r.falhas.map(f => linha(f.ref, false, f.erro))];
