@@ -24,6 +24,12 @@ function variantes(pn) {
   return [...new Set([d, num.length === 8 ? `55${ddd}9${num}` : null, num.length === 9 && num[0] === '9' ? `55${ddd}${num.slice(1)}` : null].filter(Boolean))];
 }
 
+// Suporte da Barber School (dúvidas do curso completo). Vazio no painel = 5551926366047; escreva "-" para não usar.
+const suporteBS = (cfg) => String(cfg.wa_suporte_barberschool || '5551926366047').replace(/\D/g, '');
+// Números que a Bia nunca responde nem chama (Configurações: wa_ignorar; o suporte da Barber School já entra)
+const ignorados = (cfg) => new Set([suporteBS(cfg), ...String(cfg.wa_ignorar || '').split(/[\s,;]+/)]
+  .flatMap(n => variantes(String(n || '').replace(/\D/g, ''))));
+
 // Hora de Brasília em minutos desde 00:00
 const minutosBR = (ms) => { const d = new Date(ms - 3 * 3600e3); return d.getUTCHours() * 60 + d.getUTCMinutes(); };
 const hm = (s, pad) => { const m = /^(\d{2}):(\d{2})$/.exec(String(s || '')); return m ? Number(m[1]) * 60 + Number(m[2]) : pad; };
@@ -49,6 +55,7 @@ async function entrou(b) {
   if (!destino) return { ok: true, ignorado: 'grupo fora da Semana' };
   const meu = String(cfg.wa_ext_numero || '');
   const lista = Array.isArray(b.participantes) ? b.participantes.slice(0, 50) : [];
+  const ign = ignorados(cfg);
   let n = 0;
   // fila: espaça cada mensagem depois da última que ainda vai sair
   const ultima = await db.one('sdb_wa_dm', 'select=agendar_em&status=eq.pendente&order=agendar_em.desc');
@@ -58,6 +65,7 @@ async function entrou(b) {
     if (!ID_PESSOA.test(id)) continue;
     const pn = variantes(p.pn || (id.endsWith('@c.us') ? id.split('@')[0] : ''))[0] || null;
     if (pn && meu && variantes(meu).includes(pn)) continue; // o próprio número de avisos
+    if (pn && ign.has(pn)) continue; // suporte da Barber School e outros números da equipe
     const lead = pn ? await db.one('sdb_leads', `select=id&whatsapp=in.(${variantes(pn).join(',')})&order=created_at.desc`) : null;
     // uma boas-vindas por pessoa, para sempre (sair e voltar não repete)
     const chave = `bv:${pn || id}`;
@@ -72,6 +80,29 @@ async function entrou(b) {
   }
   if (n) await logEvento('wa_bv_fila', { payload: { grupo: destino.nome, novos: n } }).catch(() => {});
   return { ok: true, na_fila: n };
+}
+
+// Alguém mandou "SEMANA - quero receber as aulas" no privado do número de avisos (botão da página de obrigado).
+// A Bia responde em seguida com o acesso, o grupo e o certificado. Uma resposta por pessoa por dia.
+async function palavra(b) {
+  const cfg = await config();
+  if (cfg.wa_bv_ativo === '0' || cfg.wa_palavra_ativo === '0') return { ok: true, desligado: true };
+  const id = txt(b.de, 60);
+  if (!ID_PESSOA.test(id)) return { ok: false, erro: 'remetente inválido' };
+  const pn = variantes(b.pn || (id.endsWith('@c.us') ? id.split('@')[0] : ''))[0] || null;
+  const meu = String(cfg.wa_ext_numero || '');
+  if (pn && meu && variantes(meu).includes(pn)) return { ok: true, ignorado: 'próprio número' };
+  if (pn && ignorados(cfg).has(pn)) return { ok: true, ignorado: 'número na lista de ignorados' };
+  const lead = pn ? await db.one('sdb_leads', `select=id&whatsapp=in.(${variantes(pn).join(',')})&order=created_at.desc`) : null;
+  const dia = new Date(agora() - 3 * 3600e3).toISOString().slice(0, 10);
+  try {
+    await db.insert('sdb_wa_dm', {
+      chave: `kw:${pn || id}:${dia}`, tipo: 'kw', grupo_id: null, para: pn ? `${pn}@c.us` : id, pn, lead_id: lead?.id || null,
+      nome_wa: txt(b.nome, 60) || null, status: 'pendente', agendar_em: new Date(agora() + (10 + Math.random() * 20) * 1e3).toISOString(),
+    });
+  } catch (e) { if (e.code !== '23505') throw e; return { ok: true, ja_respondido: true }; }
+  await logEvento('wa_palavra', { lead_id: lead?.id || null, payload: { pn, achou: !!lead } }).catch(() => {});
+  return { ok: true, na_fila: 1, achou: !!lead };
 }
 
 // Lembrete do certificado: 5 min depois de gerar a cobrança, se ainda não pagou, a Bia chama no WhatsApp.
@@ -132,7 +163,16 @@ async function montar(dm, cfg) {
   v.linha_suporte = suporte && meu && !variantes(meu).some(x => variantes(suporte).includes(x)) ? `é só me chamar no suporte: ${SITE_URL().replace(/^https?:\/\//, '')}/suporte` : 'é só me responder por aqui';
   // as linhas também podem ter variáveis ({{cert_link}}, {{cert_preco}}, {{nome}})
   for (const k of Object.keys(v)) if (k.startsWith('linha_')) v[k] = preencher(v[k], v);
-  let texto = preencher(linha(dm.tipo === 'cert' ? C.g_dm_cert_lembrete : C.g_dm_bv), v);
+  if (dm.tipo === 'kw') {
+    v.linha_inscricao = lead ? 'Recebi sua mensagem e a sua inscrição está confirmada ✅' : 'Recebi sua mensagem!';
+    const g = String(cfg.grupo_whatsapp_url || '').trim();
+    v.linha_grupo = lead && /^https:\/\//.test(g) ? preencher(linha(C.g_dm_palavra_grupo), { grupo_link: g }) : '';
+    v.linha_suporte = 'é só me responder por aqui';
+    const bs = variantes(suporteBS(cfg))[0];
+    v.linha_barberschool = bs ? preencher(linha(C.g_dm_palavra_bs), { bs_link: `https://wa.me/${bs}` }) : '';
+  }
+  const principal = dm.tipo === 'cert' ? C.g_dm_cert_lembrete : dm.tipo === 'kw' ? C.g_dm_palavra : C.g_dm_bv;
+  let texto = preencher(linha(principal), v);
   if (!v.nome) texto = texto.replace(/^Oi, ?!/, 'Oi!'); // sem nome: "Oi! Tudo bem?"
   // linhas vazias somem sem deixar buraco
   return texto.split(/\n{2,}/).map(p => p.trim()).filter(Boolean).join('\n\n').slice(0, 4000);
@@ -143,15 +183,23 @@ async function proximo() {
   const cfg = await config();
   if (cfg.wa_bv_ativo === '0') return null;
   const t = agora();
+  const travado = new Date(t - 5 * 60e3).toISOString();
+  const livre = (d) => !d.tentado_em || Date.parse(d.tentado_em) < Date.parse(travado); // a que está saindo agora não volta
+  // 1º: resposta a quem mandou "SEMANA" no privado (a pessoa chamou: sai a qualquer hora e fora do limite diário)
+  const kw = (await db.select('sdb_wa_dm', `select=*&tipo=eq.kw&status=eq.pendente&agendar_em=lte.${encodeURIComponent(agoraIso())}&order=agendar_em.asc&limit=5`)).filter(livre)[0];
+  if (kw) {
+    if (t - Date.parse(kw.created_at) > 864e5) { await db.update('sdb_wa_dm', `id=eq.${kw.id}`, { status: 'expirado' }); return null; }
+    const texto = await montar(kw, cfg);
+    await db.update('sdb_wa_dm', `id=eq.${kw.id}`, { tentado_em: agoraIso(), tentativas: (kw.tentativas || 0) + 1, texto });
+    return { id: kw.id, para: kw.para, texto };
+  }
   if (dentroDoHorario(t, cfg) !== t) return null;
   const limite = Number(cfg.wa_bv_limite_dia || 60);
   const hoje = new Date(t - 3 * 3600e3).toISOString().slice(0, 10);
-  const enviadosHoje = await db.select('sdb_wa_dm', `select=id&status=eq.enviado&enviado_em=gte.${encodeURIComponent(new Date(`${hoje}T00:00:00-03:00`).toISOString())}&limit=${limite}`);
+  const enviadosHoje = await db.select('sdb_wa_dm', `select=id&tipo=neq.kw&status=eq.enviado&enviado_em=gte.${encodeURIComponent(new Date(`${hoje}T00:00:00-03:00`).toISOString())}&limit=${limite}`);
   if (enviadosHoje.length >= limite) return null;
-  const travado = new Date(t - 5 * 60e3).toISOString();
-  // a que está sendo enviada agora (tentada há menos de 5 min) não volta para a fila
-  const fila = (await db.select('sdb_wa_dm', `select=*&status=eq.pendente&agendar_em=lte.${encodeURIComponent(agoraIso())}&order=agendar_em.asc&limit=10`))
-    .filter(d => !d.tentado_em || Date.parse(d.tentado_em) < Date.parse(travado));
+  const fila = (await db.select('sdb_wa_dm', `select=*&status=eq.pendente&tipo=neq.kw&agendar_em=lte.${encodeURIComponent(agoraIso())}&order=agendar_em.asc&limit=10`))
+    .filter(livre);
   let dm = null;
   for (const d of fila) {
     if (d.tipo === 'cert') {
@@ -159,8 +207,12 @@ async function proximo() {
       const l = d.lead_id ? await db.one('sdb_leads', `select=cert_status,cert_payment_id&id=eq.${d.lead_id}`) : null;
       if (!l || l.cert_status !== 'pendente' || `cert:${l.cert_payment_id}` !== d.chave) { await db.update('sdb_wa_dm', `id=eq.${d.id}`, { status: 'cancelado', erro: 'pagou ou a cobrança mudou' }); continue; }
       // a boas-vindas da Bia já falou do certificado há pouco: não manda as duas
-      const bv = await db.one('sdb_wa_dm', `select=id&tipo=eq.bv&lead_id=eq.${d.lead_id}&status=eq.enviado&enviado_em=gte.${encodeURIComponent(new Date(t - 6 * 3600e3).toISOString())}`).catch(() => null);
+      const bv = await db.one('sdb_wa_dm', `select=id&tipo=in.(bv,kw)&lead_id=eq.${d.lead_id}&status=eq.enviado&enviado_em=gte.${encodeURIComponent(new Date(t - 6 * 3600e3).toISOString())}`).catch(() => null);
       if (bv) { await db.update('sdb_wa_dm', `id=eq.${d.id}`, { status: 'cancelado', erro: 'boas-vindas recente já falou do certificado' }); continue; }
+    }
+    if (d.tipo === 'bv' && d.pn) {
+      const kw = await db.one('sdb_wa_dm', `select=id&tipo=eq.kw&pn=eq.${d.pn}&status=eq.enviado&enviado_em=gte.${encodeURIComponent(new Date(t - 864e5).toISOString())}`).catch(() => null);
+      if (kw) { await db.update('sdb_wa_dm', `id=eq.${d.id}`, { status: 'cancelado', erro: 'a Bia já respondeu o pedido de aulas no privado' }); continue; }
     }
     dm = d; break;
   }
@@ -198,8 +250,8 @@ async function resumo() {
   return {
     ativo: cfg.wa_bv_ativo !== '0', hoje: env.length, fila: fila.length, limite: Number(cfg.wa_bv_limite_dia || 60),
     horario: `${cfg.wa_bv_inicio || '08:00'}–${cfg.wa_bv_fim || '21:00'}`,
-    ultimos: ult.map(u => ({ quem: (u.tipo === 'cert' ? 'lembrete certificado · ' : '') + (u.nome_wa || (u.pn ? `+${u.pn}` : 'contato')), status: u.status, erro: u.erro, em: u.enviado_em || u.created_at })),
+    ultimos: ult.map(u => ({ quem: (u.tipo === 'cert' ? 'lembrete certificado · ' : u.tipo === 'kw' ? 'pediu as aulas · ' : '') + (u.nome_wa || (u.pn ? `+${u.pn}` : 'contato')), status: u.status, erro: u.erro, em: u.enviado_em || u.created_at })),
   };
 }
 
-module.exports = { entrou, proximo, resultado, resumo, montar, variantes, dentroDoHorario, lembreteCert };
+module.exports = { entrou, palavra, proximo, resultado, resumo, montar, variantes, dentroDoHorario, lembreteCert };

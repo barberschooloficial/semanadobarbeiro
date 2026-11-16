@@ -115,6 +115,31 @@ Aqui é a *Bia, do suporte da Semana do Barbeiro*. Vi que você acabou de entrar
 Qualquer dúvida, pode contar comigo: {{linha_suporte}}. Estou aqui para te ajudar.
 
 Aproveite cada aula e bons estudos! 💈` },
+  { id: 'g_dm_palavra', dm: true, titulo: 'Privado: resposta para quem manda "SEMANA - quero receber as aulas"',
+    dica: 'Sai logo depois que a pessoa manda a mensagem do botão da página de obrigado (a qualquer hora). Variáveis: {{nome}}, {{linha_inscricao}}, {{linha_perfil}}, {{linha_modulo}}, {{linha_acesso}}, {{linha_grupo}}, {{linha_certificado}}, {{linha_suporte}}, {{linha_barberschool}}.',
+    texto: `Oi, {{nome}}! Tudo bem? 😊
+
+Aqui é a *Bia, do suporte da Semana do Barbeiro*. {{linha_inscricao}}
+
+{{linha_perfil}}
+
+{{linha_modulo}}
+
+{{linha_acesso}}
+
+{{linha_grupo}}
+
+{{linha_certificado}}
+
+Qualquer dúvida sobre a Semana, pode contar comigo: {{linha_suporte}}.
+
+{{linha_barberschool}}
+
+Bons estudos! 💈` },
+  { id: 'g_dm_palavra_bs', dm: true, titulo: 'Privado: linha do suporte da Barber School na resposta do "SEMANA"', dica: 'Entra em {{linha_barberschool}}. O número fica em Configurações (Suporte da Barber School). Variável: {{bs_link}}. Escreva só "-" para tirar.',
+    texto: 'Dúvidas sobre o curso completo da Barber School (matrícula, acesso, pagamento) são com o suporte da Barber School: {{bs_link}}' },
+  { id: 'g_dm_palavra_grupo', dm: true, titulo: 'Privado: linha do grupo na resposta do "SEMANA"', dica: 'Entra em {{linha_grupo}} quando o link do grupo está preenchido em Configurações. Variável: {{grupo_link}}.',
+    texto: 'Entre no grupo da Semana para receber o aviso de cada módulo e das lives: {{grupo_link}}' },
   { id: 'g_dm_perfil_iniciante', dm: true, titulo: 'Privado: linha para quem nunca cortou', dica: 'Entra em {{linha_perfil}} para quem respondeu "Nunca peguei numa máquina".',
     texto: 'Vi no seu cadastro que você está começando do zero. Fica tranquilo: as aulas foram pensadas para quem nunca pegou numa máquina. Assista na ordem e com calma.' },
   { id: 'g_dm_perfil_ja_corta', dm: true, titulo: 'Privado: linha para quem já corta amigos', dica: 'Entra em {{linha_perfil}} para quem já corta amigos e família.',

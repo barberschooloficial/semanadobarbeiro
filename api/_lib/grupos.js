@@ -2,7 +2,7 @@
 // A extensão roda no WhatsApp Web do número de avisos, busca a fila aqui e devolve o resultado de cada envio.
 //
 // Extensão (header x-ext-key = WA_EXT_KEY):  POST ?acao=wa_sync · GET ?acao=wa_fila|wa_resumo · POST ?acao=wa_resultado
-//                                            POST ?acao=wa_entrou (alguém entrou num grupo) · POST ?acao=wa_dm_resultado (boas-vindas no privado)
+//                                            POST ?acao=wa_entrou (alguém entrou num grupo) · POST ?acao=wa_palavra (pediu as aulas no privado) · POST ?acao=wa_dm_resultado (boas-vindas no privado)
 // Painel   (header x-admin-key):             GET ?acao=wa_painel · POST ?acao=wa_destino|wa_criar|wa_cancelar|wa_semana
 const crypto = require('crypto');
 const { db, config } = require('./db');
@@ -153,6 +153,7 @@ async function extensao(acao, req, res, b) {
   }
 
   if (acao === 'wa_entrou') return send(res, 200, await BV.entrou(b));
+  if (acao === 'wa_palavra') return send(res, 200, await BV.palavra(b));
   if (acao === 'wa_dm_resultado') return send(res, 200, await BV.resultado(b));
 
   if (acao === 'wa_resumo') return send(res, 200, await resumo());
@@ -245,7 +246,7 @@ async function painel(acao, req, res, b) {
   return send(res, 400, { erro: 'Ação inválida' });
 }
 
-const EXT = new Set(['wa_sync', 'wa_fila', 'wa_resultado', 'wa_resumo', 'wa_entrou', 'wa_dm_resultado']);
+const EXT = new Set(['wa_sync', 'wa_fila', 'wa_resultado', 'wa_resumo', 'wa_entrou', 'wa_palavra', 'wa_dm_resultado']);
 const PAINEL = new Set(['wa_painel', 'wa_destino', 'wa_criar', 'wa_cancelar', 'wa_envios', 'wa_semana']);
 
 module.exports = { EXT, PAINEL, extensao, painel, garantirCalendario, CATEGORIAS, extOk, cfgSet };
