@@ -414,3 +414,17 @@ returns json language sql stable security definer set search_path = public as $$
 $$;
 revoke all on function sdb_regua_contatos(text, text, text, text, text) from public, anon, authenticated;
 grant execute on function sdb_regua_contatos(text, text, text, text, text) to service_role;
+
+-- Convites automáticos das listas (aba Leads) e limite do plano do Resend
+insert into sdb_config (chave, valor, descricao) values
+  ('conv_auto_ativo', '1', 'Convida as listas sozinho, bloco por bloco'),
+  ('conv_auto_listas', '', 'Listas que entram nos convites automáticos (vazio = todas)'),
+  ('conv_auto_bloco', '100', 'Tamanho de cada bloco novo'),
+  ('conv_auto_reenvio_dias', '3', 'Reenvio para quem não abriu: dias depois do convite (0 desliga)'),
+  ('conv_auto_inicio', '08:00', 'Convites automáticos: a partir de'),
+  ('conv_auto_fim', '20:00', 'Convites automáticos: até'),
+  ('email_resend_dia', '100', 'Limite diário do plano do Resend (0 = sem limite)'),
+  ('email_reserva_aulas', '30', 'E-mails do dia guardados para as aulas'),
+  ('conv_auto_wa', '0', 'WhatsApp pela API (ManyChat) para quem abriu ou clicou no convite'),
+  ('conv_auto_wa_dia', '30', 'WhatsApp de convite: máximo por dia')
+on conflict (chave) do nothing;
