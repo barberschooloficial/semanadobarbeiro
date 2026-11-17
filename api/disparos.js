@@ -73,6 +73,19 @@ const CAMPOS_CFG = [
     { chave: 'email_aquecimento_inicio', rotulo: 'Convites no primeiro dia', tipo: 'int' },
     { chave: 'email_convite_dia', rotulo: 'Teto de convites por e-mail por dia', tipo: 'int', ajuda: 'O que passar fica para o dia seguinte sozinho. E-mails das aulas para quem se cadastrou não entram nesse limite.' },
   ] },
+  { titulo: 'Convites automáticos (aba Leads)', campos: [
+    { chave: 'conv_auto_ativo', rotulo: 'Convidar as listas sozinho, bloco por bloco', tipo: 'bool', ajuda: 'A cada 5 min: termina o bloco que parou, faz o reenvio para quem não abriu e, sem pendência, monta o próximo bloco e convida. Um convite por vez, dentro da cota do dia.' },
+    { chave: 'conv_auto_listas', rotulo: 'Listas que entram', tipo: 'texto', opcional: true, ajuda: 'Separe com vírgula (ex.: semana_2020, barbearias_maps). Vazio = todas.' },
+    { chave: 'conv_auto_bloco', rotulo: 'Tamanho de cada bloco novo', tipo: 'int' },
+    { chave: 'conv_auto_reenvio_dias', rotulo: 'Reenvio para quem não abriu: dias depois do convite', tipo: 'int', ajuda: '0 desliga. Não vale para barbearias (um convite só).' },
+    { chave: 'conv_auto_inicio', rotulo: 'Convites: a partir de', tipo: 'hora' },
+    { chave: 'conv_auto_fim', rotulo: 'Convites: até', tipo: 'hora' },
+    { chave: 'email_resend_dia', rotulo: 'Limite diário do plano do Resend', tipo: 'int', ajuda: 'Grátis: 100 por dia (3.000 no mês). Plano pago: escreva 0 (sem limite diário).' },
+    { chave: 'email_reserva_aulas', rotulo: 'E-mails do dia guardados para as aulas', tipo: 'int', ajuda: 'Os convites param antes, para sobrar cota para quem já se cadastrou.' },
+    { chave: 'conv_auto_wa', rotulo: 'WhatsApp pela API para quem abriu ou clicou no convite', tipo: 'bool', ajuda: 'Só funciona com o fluxo do ManyChat preenchido abaixo (template aprovado pela Meta). Nunca usa a extensão: mensagem fria pelo WhatsApp Web bloqueia o número.' },
+    { chave: 'mc_flow_convite', rotulo: 'ID do fluxo do ManyChat do convite (WhatsApp)', tipo: 'texto', opcional: true },
+    { chave: 'conv_auto_wa_dia', rotulo: 'WhatsApp de convite: máximo por dia', tipo: 'int' },
+  ] },
   { titulo: 'Prospecção de barbearias (Apify)', campos: [
     { chave: 'prosp_ativo', rotulo: 'Buscar barbearias todo mês', tipo: 'bool', ajuda: 'Começa no dia 1, uma cidade por vez, e para no teto de gasto. Precisa da chave APIFY_TOKEN na Vercel.' },
     { chave: 'prosp_cidades', rotulo: 'Cidades (separe com ponto e vírgula)', tipo: 'texto', ajuda: 'Ex.: São Paulo, SP; Curitiba, PR' },
@@ -158,10 +171,25 @@ async function garantirCalendario(turma, cfg, folgaMs = 10 * 60e3) {
   return { criados, pulados };
 }
 
+// WhatsApp para listas importadas (ManyChat): teto por dia para não queimar o número
+async function cotaWaContatos(cfg) {
+  const teto = Math.max(0, Number(cfg.conv_auto_wa_dia ?? 30));
+  const hoje = new Date(Date.parse(`${ymd(agora())}T00:00:00-03:00`)).toISOString();
+  const ds = (await db.select('sdb_disparos', `select=id&publico=eq.contatos&canal=eq.whatsapp&atualizado_em=gte.${encodeURIComponent(hoje)}&limit=200`)).map(d => d.id);
+  if (!ds.length) return teto;
+  const feitos = (await db.select('sdb_contato_envios', `select=contato_id&status=eq.enviado&disparo_id=in.(${ds.join(',')})&enviado_em=gte.${encodeURIComponent(hoje)}&limit=${teto + 1}`)).length;
+  return Math.max(0, teto - feitos);
+}
+
 // Quantos convites frios ainda podem sair hoje (horário de Brasília)
 async function cotaConvites(cfg) {
-  const teto = Math.max(10, Number(cfg.email_convite_dia || 500));
+  if (cfg.email_cota_dia === ymd(agora())) return 0; // o Resend já avisou que a cota do dia acabou
+  let teto = Math.max(10, Number(cfg.email_convite_dia || 500));
+  // limite diário do plano do Resend (grátis: 100/dia), guardando uma parte para os e-mails das aulas de quem se cadastrou
+  const resendDia = Number(cfg.email_resend_dia ?? 100);
+  if (resendDia > 0) teto = Math.min(teto, Math.max(0, resendDia - Math.max(0, Number(cfg.email_reserva_aulas ?? 30))));
   let limite = teto;
+  if (!teto) return 0;
   if (cfg.email_aquecimento !== '0') {
     const primeiro = (await db.select('sdb_contato_envios', 'select=enviado_em&status=eq.enviado&order=enviado_em.asc&limit=1'))[0];
     const dias = primeiro ? Math.floor((agora() - Date.parse(primeiro.enviado_em)) / DIA) : 0;
@@ -182,6 +210,7 @@ async function processar(limiteMs = 40000) {
   if (cfg0.grupos_auto !== '0') await G.garantirCalendario(segundaDa(agora())).catch(e => console.error('grupos', e.message));
   await require('./_lib/boasvindas').pendentes().catch(e => console.error('boas-vindas', e.message));
   await require('./_lib/prospeccao').passo().catch(e => console.error('prospeccao', e.message));
+  if (cfg0.conv_auto_ativo === '1') await require('./_lib/convites-auto').rodar(cfg0, await cotaConvites(cfg0)).catch(e => console.error('convites auto', e.message));
   await require('./_lib/cert-conferir').expirarVencidos().catch(e => console.error('cert expirar', e.message));
   await require('./_lib/cert-conferir').conferirPendentes().catch(e => console.error('cert', e.message));
   const t0 = Date.now();
@@ -207,7 +236,7 @@ async function processar(limiteMs = 40000) {
     if (ehC) { baseC = baseC || await C.carregar(db); publico = C.aptos(C.filtrar(baseC, d.filtro || {}), d.canal); }
     else { base = base || await carregar(db, cfg0); publico = aptos(filtrar(base, d.filtro || {}), d.canal); }
     const pendentes = publico.filter(l => !feitos.has(l.id));
-    let enviados = d.enviados || 0, falhas = d.falhas || 0, erro = null;
+    let enviados = d.enviados || 0, falhas = d.falhas || 0, erro = null, cotaCheia = false;
     const patch0 = { status: 'enviando', atualizado_em: new Date().toISOString() };
     if (d.status === 'agendado') patch0.total = publico.length;
     await db.update('sdb_disparos', `id=eq.${d.id}`, patch0);
@@ -227,6 +256,11 @@ async function processar(limiteMs = 40000) {
           pixel: ehC ? `${SITE_URL()}/api/t?o=${l.token}&s=${Math.floor(Date.now() / 1000)}` : null, // s = hora do envio (filtra a abertura automática do Gmail)
           from: ehC && /^barbearias/.test(String(l.lista || '')) && process.env.EMAIL_FROM_CONVITE ? process.env.EMAIL_FROM_CONVITE : undefined,
         })));
+        // cota do dia do Resend acabou: ninguém é marcado como falha e o disparo continua amanhã sozinho
+        if (r.parar && /quota|daily|limit/i.test(r.falhas[0]?.erro || '')) {
+          await db.upsert('sdb_config', { chave: 'email_cota_dia', valor: ymd(agora()) }, 'chave'); config.limpar?.();
+          cotaCheia = true; break;
+        }
         const linhas = [...r.ok.map(id => linha(id, true, null, r.ids?.[id])), ...r.falhas.map(f => linha(f.ref, false, f.erro))];
         if (linhas.length) await db.insert(T_ENV, linhas);
         enviados += r.ok.length; falhas += r.falhas.length;
@@ -236,8 +270,9 @@ async function processar(limiteMs = 40000) {
       }
     } else {
       if (!d.flow_ns) erro = 'Falta o ID do fluxo do ManyChat (flow_ns)';
-      for (let i = 0; !erro && i < pendentes.length && Date.now() - t0 < limiteMs; i += 5) {
-        const lote = pendentes.slice(i, i + 5);
+      const filaW = ehC ? pendentes.slice(0, await cotaWaContatos(cfg0)) : pendentes; // listas importadas: teto diário
+      for (let i = 0; !erro && i < filaW.length && Date.now() - t0 < limiteMs; i += 5) {
+        const lote = filaW.slice(i, i + 5);
         const res = await Promise.all(lote.map(async (l) => {
           try {
             let mcId = l.manychat_id;
