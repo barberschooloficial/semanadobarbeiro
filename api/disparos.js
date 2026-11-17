@@ -254,7 +254,7 @@ async function processar(limiteMs = 40000) {
           ref: l.id, para: l.email, assunto: preencher(d.assunto, vars(l, 'e')), texto: preencher(d.texto, vars(l, 'e')),
           descadastro: ehC ? `${SITE_URL()}/api/disparos?acao=descadastro&c=${l.token}` : linkSair(l),
           pixel: ehC ? `${SITE_URL()}/api/t?o=${l.token}&s=${Math.floor(Date.now() / 1000)}` : null, // s = hora do envio (filtra a abertura automática do Gmail)
-          from: ehC && /^barbearias/.test(String(l.lista || '')) && process.env.EMAIL_FROM_CONVITE ? process.env.EMAIL_FROM_CONVITE : undefined,
+          from: ehC && process.env.EMAIL_FROM_CONVITE ? process.env.EMAIL_FROM_CONVITE : undefined, // convites de lista saem pelo domínio próprio (protege o semanadobarbeiro.com.br)
         })));
         // cota do dia do Resend acabou: ninguém é marcado como falha e o disparo continua amanhã sozinho
         if (r.parar && /quota|daily|limit/i.test(r.falhas[0]?.erro || '')) {
