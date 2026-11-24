@@ -270,6 +270,7 @@
         <div class="extras" id="extras"></div>
       </div>
       <div class="kpis" id="kpis"></div>
+      <div class="card" style="margin-top:14px"><h3>Canais</h3><p class="small muted" style="margin-top:-4px">De onde veio cada pessoa: anúncio, Instagram (bio, stories, direct), e-mail, WhatsApp, busca. Links sem UTM são classificados pelo site de origem.</p><div class="rolagem"><table id="tCanais"></table></div></div>
       <div class="card" style="margin-top:14px"><h3>Campanhas</h3><p class="small muted" style="margin-top:-4px">Pela utm_campaign do link (o primeiro anúncio ou post que trouxe a pessoa). Clique numa linha para filtrar o funil.</p><div class="rolagem"><table id="tCamp"></table></div></div>
       <div class="card" style="margin-top:14px"><h3>Turmas</h3><div class="rolagem"><table id="tTurmas"></table></div></div>
       <div class="grid g2" style="margin-top:14px">
@@ -594,6 +595,8 @@
       const b = document.createElement('button'); b.type = 'button'; b.className = 'btn sm ghost'; b.textContent = l + ' →'; b.onclick = fn; $('kpis').appendChild(b);
     });
     const pc = (a, b) => b ? `${(a / b * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%` : '—';
+    $('tCanais').innerHTML = '<tr><th>Canal</th><th class="n">Visitas</th><th class="n">Cadastros</th><th class="n">Conv.</th><th class="n">Assistiram</th><th class="n">Cert.</th><th class="n">Cursos</th><th class="n">Conv. venda</th><th class="n">Receita</th></tr>' +
+      ((d.canais || []).map(c => `<tr><td>${esc(c.canal)}</td><td class="n">${c.visitas}</td><td class="n">${c.cadastros}</td><td class="n">${pc(c.cadastros, c.visitas)}</td><td class="n">${c.assistiram}</td><td class="n">${c.certificados}</td><td class="n">${c.cursos}</td><td class="n">${pc(c.cursos, c.cadastros)}</td><td class="n">${brlA(c.receita)}</td></tr>`).join('') || '<tr><td class="muted" colspan="9">Sem dados ainda</td></tr>');
     $('tCamp').innerHTML = '<tr><th>Campanha</th><th class="n">Visitas</th><th class="n">Cadastros</th><th class="n">Conv.</th><th class="n">Assistiram</th><th class="n">Cert.</th><th class="n">Cursos</th><th class="n">Conv. venda</th><th class="n">Receita</th></tr>' +
       (d.campanhas.map(c => `<tr data-camp="${esc(c.campanha)}"><td>${esc(c.campanha)}</td><td class="n">${c.visitas}</td><td class="n">${c.cadastros}</td><td class="n">${pc(c.cadastros, c.visitas)}</td><td class="n">${c.assistiram}</td><td class="n">${c.certificados}</td><td class="n">${c.cursos}</td><td class="n">${pc(c.cursos, c.cadastros)}</td><td class="n">${brlA(c.receita)}</td></tr>`).join('') || '<tr><td class="muted" colspan="9">Sem dados ainda</td></tr>');
     $('tCamp').querySelectorAll('[data-camp]').forEach(tr => tr.onclick = () => { R.campanha = tr.dataset.camp; $('rCamp').value = R.campanha; carregarResumo(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
