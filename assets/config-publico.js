@@ -8,6 +8,9 @@ window.SDB = {
   // Palavra que dispara o fluxo de boas-vindas no ManyChat
   WHATSAPP_PALAVRA: 'SEMANA',
   INSTAGRAM: 'barberschooloficial',
+  // Promoção sazonal: só dá nome ao desconto que já existe (certificado nas 24 h e curso no 5º dia).
+  // Some sozinha depois de "ate" (horário de Brasília). Para desligar antes, apague esta linha.
+  PROMO_SAZONAL: { nome: 'Black Friday', ate: '2026-11-30T23:59:59-03:00' },
   SITE_URL: 'https://semanadobarbeiro.com.br',
   APP_URL: 'https://app.semanadobarbeiro.com.br',
   // Oferta do curso (5º dia) — CONFIRME o que o curso entrega hoje

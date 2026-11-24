@@ -152,5 +152,12 @@
     return new Date(dow >= 1 && dow <= ate ? seg : seg + 7 * 864e5);
   }
 
-  window.sdb = { turma, track, cookieMeta, comUtm, api, store, qs, ir, caminho, DEMO, token, maskWhats, maskCpf, toast, esc, quando, brl, pixel, whatsLink, ligarSuporte, C };
+  // Nome da promoção sazonal em vigor (ex.: "Black Friday") ou null quando acabou/não existe
+  function promo() {
+    const p = C.PROMO_SAZONAL;
+    const fim = p && Date.parse(p.ate);
+    return p && p.nome && Number.isFinite(fim) && Date.now() < fim ? String(p.nome) : null;
+  }
+
+  window.sdb = { turma, track, cookieMeta, comUtm, api, store, qs, ir, caminho, DEMO, token, maskWhats, maskCpf, toast, esc, quando, brl, pixel, whatsLink, ligarSuporte, promo, C };
 })();
