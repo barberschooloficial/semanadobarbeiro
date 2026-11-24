@@ -2,6 +2,8 @@
 (() => {
   const { api, store, qs, ir, caminho, token, maskWhats, maskCpf, toast, esc, quando, brl, pixel, C } = sdb;
   const promoNome = () => (typeof sdb.promo === "function" ? sdb.promo() : null); // Black Friday etc. (tolera common.js antigo em cache)
+  // Etapas do funil que também vão para o Pixel da Meta (remarketing e otimização)
+  const evMeta = (nome, params) => { try { pixel(); if (window.fbq) fbq('trackCustom', nome, params || {}); } catch {} };
   const $ = (id) => document.getElementById(id);
   let T = token();
   let estado = null;
@@ -312,7 +314,7 @@
         <div class="player-acoes" id="playerAcoes">${acoes}</div>
       </div>
     </div>`;
-    $('poster').onclick = () => { sdb.track('aula_play', `aula ${a.ordem}`); tocar(a); };
+    $('poster').onclick = () => { sdb.track('aula_play', `aula ${a.ordem}`); evMeta('AulaIniciada', { aula: a.ordem }); tocar(a); };
     ligarAcoes(a, proxima);
   }
 
@@ -336,7 +338,10 @@
     const ok = $('btnConcluir');
     if (ok) ok.onclick = async () => {
       ok.disabled = true;
-      try { await api('progresso', { method: 'POST', token: T, body: { aula_id: a.id } }); toast('Aula concluída! 💈'); await carregar(); }
+      try { await api('progresso', { method: 'POST', token: T, body: { aula_id: a.id } }); toast('Aula concluída! 💈'); await carregar();
+        const pr = estado && estado.progresso;
+        evMeta('AulaConcluida', { aula: a.ordem, assistidas: pr ? pr.assistidas : null });
+        if (pr && pr.total && pr.assistidas >= pr.total) evMeta('SemanaConcluida', { aulas: pr.total }); }
       catch (e) { toast(e.message); } finally { if ($('btnConcluir')) $('btnConcluir').disabled = false; }
     };
     const px = $('btnProxima');
@@ -403,7 +408,7 @@
       return;
     }
     if (!(o.aberta && o.checkout)) { box.innerHTML = ''; return; }
-    if (!window.__ofertaVista) { window.__ofertaVista = 1; sdb.track('oferta_vista'); }
+    if (!window.__ofertaVista) { window.__ofertaVista = 1; sdb.track('oferta_vista'); pixel('ViewContent', { content_name: 'Curso Barber School', value: Number(o.preco_por), currency: 'BRL' }); }
     const itens = (C.CURSO_ITENS || []).map(i => `<li>${esc(i)}</li>`).join('');
     box.innerHTML = `<section class="oferta">
       <div class="foto-fundo" style="background-image:url('/assets/img/bancada.jpg')"></div>
@@ -500,7 +505,7 @@
       ${pendente ? `<a class="btn green" href="${esc(b.invoice_url)}" style="margin-top:10px">Concluir pagamento</a>` : `<button class="btn green" id="btnHub" style="margin-top:10px">Quero a Barbeearia</button>`}
       ${posHotmart && !pendente ? `<a class="btn ghost" href="/" style="margin-top:8px">Agora não, voltar às aulas</a>` : ''}
     </div>`;
-    if (!window.__hubVisto) { window.__hubVisto = 1; sdb.track('barberhub_vista'); }
+    if (!window.__hubVisto) { window.__hubVisto = 1; sdb.track('barberhub_vista'); pixel('ViewContent', { content_name: 'Barbeearia' }); }
     if (!pendente) $('btnHub').onclick = () => { sdb.track('barberhub_clique'); abrirCpf('barberhub'); };
   }
 
