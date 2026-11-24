@@ -13,6 +13,23 @@ const { turmaDo, segundaDa, em } = require('./_lib/turma');
 const { agora } = require('./_lib/util');
 
 const COLS = 'id,nome,whatsapp,email,perfil,quiz,quiz_at,origem,utm_source,utm_medium,utm_campaign,utm_content,cert_status,curso_status,barberhub_status,turma_inicio,last_seen_at,created_at';
+
+// Canal de origem a partir do utm_source/utm_medium (o site preenche os dois mesmo sem UTM no link: ver assets/common.js)
+function canal(x) {
+  const s = String(x.utm_source || '').toLowerCase(), m = String(x.utm_medium || '').toLowerCase();
+  if (!s) return 'Direto';
+  if (/^(paid|cpc|ads?|pago|paid_social)$/.test(m) || /^(meta|fb_ads|facebook_ads|google_ads)$/.test(s)) return /^google/.test(s) ? 'Google Ads' : 'Anúncio Meta';
+  if (m === 'convite') return s === 'whatsapp' ? 'WhatsApp (disparo)' : 'E-mail (disparo)';
+  if (s === 'email') return 'E-mail';
+  if (s === 'whatsapp') return m === 'grupo' ? 'WhatsApp (grupo)' : 'WhatsApp';
+  if (s === 'instagram' || s === 'ig') return m === 'dm' ? 'Instagram (direct)' : 'Instagram orgânico';
+  if (s === 'facebook') return 'Facebook orgânico';
+  if (s === 'google' || s === 'bing') return 'Busca orgânica';
+  if (s === 'youtube') return 'YouTube';
+  if (s === 'tiktok') return 'TikTok';
+  if (s === 'barberschool' || s === 'barbeearia' || s === 'semanadobarbeiro') return 'Sites da casa';
+  return 'Outros';
+}
 const UUID = /^[0-9a-f-]{36}$/i;
 
 // PostgREST devolve no máximo ~1000 linhas por chamada: pagina até trazer tudo
@@ -45,7 +62,7 @@ module.exports = handler(['GET'], async (req, res) => {
     const [leadsTodos, prog, trilha, aulas] = await Promise.all([
       todos('sdb_leads', 'select=id,perfil,turma_inicio,utm_source,utm_medium,utm_campaign,quiz_at,last_seen_at,cert_status,cert_valor,curso_status,barberhub_status,created_at&order=created_at.asc'),
       todos('sdb_progresso', 'select=lead_id,aula_id'),
-      todos('sdb_trilha', 'select=sessao,lead_id,tipo,pagina,utm_source,utm_campaign,created_at&tipo=in.(visita,oferta_vista,checkout_clique)&order=id.asc'),
+      todos('sdb_trilha', 'select=sessao,lead_id,tipo,pagina,utm_source,utm_medium,utm_campaign,created_at&tipo=in.(visita,oferta_vista,checkout_clique)&order=id.asc'),
       db.select('sdb_aulas', 'select=id,ordem,titulo&ativo=eq.true&order=ordem.asc'),
     ]);
     const camp = (x) => x.utm_campaign || (x.utm_source ? `(${x.utm_source} sem campanha)` : '(direto / orgânico)');
@@ -86,6 +103,16 @@ module.exports = handler(['GET'], async (req, res) => {
         cursos: L.filter(l => l.curso_status === 'pago').length, barbeearia: L.filter(l => l.barberhub_status === 'pago').length, receita: receitaDe(L),
       };
     }).sort((a, b) => b.cadastros - a.cadastros || b.visitas - a.visitas);
+    // Canais (anúncio, Instagram orgânico, direct, e-mail, WhatsApp...) pelo utm_source/utm_medium
+    const canaisNomes = new Set([...baseTurma.map(canal), ...vTurma.map(canal)]);
+    const canais = [...canaisNomes].map(c => {
+      const L = baseTurma.filter(l => canal(l) === c);
+      return {
+        canal: c, visitas: sess(vTurma.filter(t => canal(t) === c)), cadastros: L.length,
+        assistiram: L.filter(l => nAulas[l.id] > 0).length, certificados: L.filter(l => l.cert_status === 'pago').length,
+        cursos: L.filter(l => l.curso_status === 'pago').length, barbeearia: L.filter(l => l.barberhub_status === 'pago').length, receita: receitaDe(L),
+      };
+    }).sort((a, b) => b.cadastros - a.cadastros || b.visitas - a.visitas);
     const turmas = [...new Set(leadsTodos.map(l => l.turma))].sort().reverse().map(t => {
       const L = leadsTodos.filter(l => l.turma === t);
       return { turma: t, cadastros: L.length, assistiram: L.filter(l => nAulas[l.id] > 0).length, cursos: L.filter(l => l.curso_status === 'pago').length, receita: receitaDe(L) };
@@ -95,7 +122,7 @@ module.exports = handler(['GET'], async (req, res) => {
       filtro: { turma, campanha }, turma_atual: segundaDa(agora()),
       etapas,
       extras: { certificados: n(l => l.cert_status === 'pago'), barbeearia: n(l => l.barberhub_status === 'pago'), receita: receitaDe(leads) },
-      campanhas, turmas, lista_campanhas: [...new Set(leadsTodos.map(l => l.camp))].sort(),
+      campanhas, canais, turmas, lista_campanhas: [...new Set(leadsTodos.map(l => l.camp))].sort(),
       aulas: aulas.map(a => ({ ordem: a.ordem, titulo: a.titulo, assistiram: vistosPorAula[a.id] || 0 })),
       por_origem: conta(leads, l => l.utm_source),
       por_perfil: conta(leads, l => PERFIS[l.perfil] || l.perfil),
