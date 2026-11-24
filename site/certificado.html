@@ -36,7 +36,7 @@ window.gtag=window.gtag||function(){dataLayer.push(arguments);};</script>
     <h3 style="margin-bottom:4px">Quer também um certificado?</h3>
     <p class="small muted">Só se você quiser comprovar que fez a Semana do Barbeiro. As aulas continuam grátis com ou sem ele.</p>
     <div class="cert-linha">
-      <div><div class="rotulo">Certificado de Participação</div><div class="price" style="font-size:2.4rem" id="preco">R$ 19,70</div><div class="small muted" id="precoSub">pagamento único · Pix na hora ou cartão</div></div>
+      <div><span class="tag cheia" id="tagPromo" style="margin-bottom:8px" hidden></span><div class="rotulo">Certificado de Participação</div><div class="price" style="font-size:2.4rem" id="preco">R$ 19,70</div><div class="small muted" id="precoSub">pagamento único · Pix na hora ou cartão</div></div>
     </div>
     <div class="countdown claro" id="cdCert" style="margin:10px 0 0" hidden></div>
     <ul class="list-ok" style="margin-top:12px">
@@ -80,7 +80,12 @@ window.gtag=window.gtag||function(){dataLayer.push(arguments);};</script>
     if (!p) return; preco = p;
     document.querySelectorAll('[data-preco]').forEach(e => { e.textContent = brl(p.valor); });
     $('preco').innerHTML = p.promo ? `<s style="font-size:1.4rem;opacity:.55;margin-right:8px">${brl(p.cheio)}</s>${brl(p.valor)}` : brl(p.valor);
-    $('precoSub').textContent = p.promo ? `pagamento único · preço das primeiras 24 horas · Pix ou cartão · depois ${brl(p.cheio)}` : 'pagamento único · Pix na hora ou cartão';
+    // Black Friday (assets/config-publico.js → PROMO_SAZONAL): só dá nome ao desconto das 24 h; some sozinha no fim do prazo
+    const bf = p.promo && p.fase !== 'ultima' ? sdb.promo() : null;
+    $('tagPromo').hidden = !bf; if (bf) $('tagPromo').textContent = bf;
+    $('precoSub').textContent = p.promo
+      ? `pagamento único · ${bf ? `desconto de ${bf} nas primeiras 24 horas do seu cadastro` : 'preço das primeiras 24 horas'} · Pix ou cartão · depois ${brl(p.cheio)}`
+      : 'pagamento único · Pix na hora ou cartão';
     $('btn').textContent = textoBtn = `Quero o certificado por ${brl(p.valor)}`;
     const cd = $('cdCert');
     if (p.promo && p.ate) {
