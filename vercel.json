@@ -67,6 +67,34 @@
       "destination": "/site/index.html"
     },
     {
+      "source": "/ig",
+      "destination": "/site/index.html"
+    },
+    {
+      "source": "/dm",
+      "destination": "/site/index.html"
+    },
+    {
+      "source": "/stories",
+      "destination": "/site/index.html"
+    },
+    {
+      "source": "/yt",
+      "destination": "/site/index.html"
+    },
+    {
+      "source": "/tt",
+      "destination": "/site/index.html"
+    },
+    {
+      "source": "/zap",
+      "destination": "/site/index.html"
+    },
+    {
+      "source": "/email",
+      "destination": "/site/index.html"
+    },
+    {
       "source": "/quiz",
       "destination": "/site/quiz.html"
     },
