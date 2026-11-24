@@ -29,7 +29,7 @@ São *10 aulas 100% grátis* com o professor *Cris Aita*, criador da Barber Scho
 *Fiquem no grupo e aguardem até lá!*
 
 Conhece alguém que quer ser barbeiro? Manda o link para ele se cadastrar 👇🏻
-semanadobarbeiro.com.br` },
+semanadobarbeiro.com.br/zap` },
   { id: 'g_boas_vindas', titulo: 'Boas-vindas + regras (seg, 7h30)', auto: [{ dia: 0, hora: '07:30' }], texto: `💈 Sejam muito bem-vindos à *Semana do Barbeiro*! 💈
 
 Aqui no grupo eu aviso cada módulo assim que for liberado. As aulas ficam no seu app:
@@ -147,7 +147,7 @@ Bons estudos! 💈` },
   { id: 'g_dm_perfil_profissional', dm: true, titulo: 'Privado: linha para quem já é barbeiro', dica: 'Entra em {{linha_perfil}} para quem trabalha em barbearia ou tem a sua.',
     texto: 'Vi no seu cadastro que você já trabalha com barbearia. Repare nos detalhes de acabamento do professor Cris Aita: é o que faz o cliente voltar e pagar mais.' },
   { id: 'g_dm_sem_cadastro', dm: true, titulo: 'Privado: linha para quem não achamos o cadastro', dica: 'Entra em {{linha_acesso}} quando o número do grupo não bate com nenhum cadastro.',
-    texto: 'Não encontrei um cadastro com este número. Se ainda não fez, é por aqui que você recebe as 10 aulas grátis: semanadobarbeiro.com.br' },
+    texto: 'Não encontrei um cadastro com este número. Se ainda não fez, é por aqui que você recebe as 10 aulas grátis: semanadobarbeiro.com.br/zap' },
   { id: 'g_dm_cert_pago', dm: true, titulo: 'Privado: linha para quem já comprou o certificado', dica: 'Entra em {{linha_certificado}}.',
     texto: 'Seu *Certificado de Participação* já está garantido ✅. Ele aparece no app assim que você concluir as 10 aulas.' },
   { id: 'g_dm_cert_pendente', dm: true, titulo: 'Privado: certificado gerado e não pago (nas primeiras 24 h)', dica: 'Entra em {{linha_certificado}}. Variáveis: {{cert_cheio}}, {{cert_preco}}, {{prazo}} (ex.: hoje às 21h40), {{cert_link}}.',
