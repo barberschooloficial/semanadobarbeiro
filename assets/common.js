@@ -123,6 +123,27 @@
   // ---------- Rastreio (api/t): sessão anônima + campanha de origem ----------
   const UTM = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content'];
   UTM.concat('origem').forEach(k => { const v = qs(k); if (v && !store.get('sdb_' + k)) store.set('sdb_' + k, v); }); // primeira campanha que trouxe a pessoa
+  // Sem UTM no link: deduz a origem pelo link curto do canal (/ig, /dm, /zap...), pelo clique de anúncio (gclid/fbclid)
+  // ou pelo site de onde a pessoa veio. Só na primeira visita (não sobrescreve uma origem já guardada).
+  const CURTOS = { '/ig': ['instagram', 'bio'], '/dm': ['instagram', 'dm'], '/stories': ['instagram', 'stories'], '/yt': ['youtube', 'organico'], '/tt': ['tiktok', 'organico'], '/zap': ['whatsapp', 'grupo'], '/email': ['email', 'organico'] };
+  function origemAuto() {
+    if (qs('utm_source') || store.get('sdb_utm_source')) return null;
+    const curto = CURTOS[location.pathname.replace(/\/+$/, '')];
+    if (curto) return curto;
+    if (qs('gclid')) return ['google', 'cpc'];
+    let ref = '';
+    try { ref = document.referrer ? new URL(document.referrer).hostname.replace(/^www\./, '') : ''; } catch {}
+    if (/(^|\.)semanadobarbeiro\.com\.br$/.test(ref)) ref = '';
+    const R = [[/(^|\.)instagram\.com$/, 'instagram'], [/(^|\.)(facebook\.com|fb\.com|fb\.me)$/, 'facebook'], [/(^|\.)google\./, 'google'], [/(^|\.)bing\.com$/, 'bing'],
+      [/(^|\.)(youtube\.com|youtu\.be)$/, 'youtube'], [/(^|\.)tiktok\.com$/, 'tiktok'], [/(^|\.)(whatsapp\.com|wa\.me)$/, 'whatsapp'], [/(^|\.)(t\.co|x\.com|twitter\.com)$/, 'twitter'],
+      [/(^|\.)(linktr\.ee|lnk\.bio)$/, 'instagram'], [/(^|\.)barberschool\.com\.br$/, 'barberschool'], [/(^|\.)barbeearia\.com\.br$/, 'barbeearia']];
+    for (const [re, src] of R) if (re.test(ref)) return [src, /linktr|lnk\.bio/.test(ref) ? 'bio' : 'organico'];
+    if (qs('fbclid')) return ['instagram', 'organico']; // clique no app do Instagram/Facebook (o app não manda o site de origem)
+    if (ref) return [ref.slice(0, 60), 'referral'];
+    return null;
+  }
+  const auto = origemAuto();
+  if (auto) { store.set('sdb_utm_source', auto[0]); store.set('sdb_utm_medium', auto[1]); }
   const cConvite = qs('c'); if (cConvite && /^[a-f0-9]{16,40}$/.test(cConvite)) store.set('sdb_contato', cConvite); // veio de um convite
   function sessao() {
     let s = store.get('sdb_sid');
