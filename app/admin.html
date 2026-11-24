@@ -853,7 +853,7 @@
         if (JSON.stringify([canalD(), publicoD(), filtroD()]) !== chave) return; // o filtro mudou no meio: a próxima contagem pinta
         reguaChave = chave; D.aptos = r.aptos; el.dataset.ok = '1';
         const custo = canalD() === 'whatsapp' ? ` · custo estimado na Meta: <b style="font-size:1.1rem">US$ ${(r.aptos * D.dados.custo_wa).toFixed(2)}</b>` : '';
-        const recebe = `<b>${r.aptos.toLocaleString('pt-BR')}</b> ${r.aptos === 1 ? 'pessoa recebe' : 'pessoas recebem'} este disparo <span class="muted">(${r.publico.toLocaleString('pt-BR')} no filtro${canalD() === 'email' ? ', sem quem saiu da lista' : publicoD() === 'contatos' ? ', com WhatsApp válido' : ', só quem está no ManyChat'})</span>${custo}`;
+        const recebe = `<b>${r.aptos.toLocaleString('pt-BR')}</b> ${r.aptos === 1 ? 'pessoa recebe' : 'pessoas recebem'} este disparo <span class="muted">(${r.publico.toLocaleString('pt-BR')} no filtro${canalD() === 'email' ? ', só quem tem e-mail e não saiu da lista' : publicoD() === 'contatos' ? ', só quem tem WhatsApp liberado para disparo' : ', só quem está no ManyChat'})</span>${custo}`;
         if (!r.regua) { el.innerHTML = recebe; return; }
         const n = (v) => v == null ? '—' : Number(v).toLocaleString('pt-BR');
         const pc = (a, b) => a == null || !b ? '' : `${Math.round(a / b * 100)}%`;
