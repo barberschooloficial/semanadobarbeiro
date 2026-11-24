@@ -68,6 +68,7 @@ window.gtag=window.gtag||function(){dataLayer.push(arguments);};</script>
 <script>
 (() => {
   const { api, token, maskCpf, pixel } = sdb;
+  const promoNome = () => (typeof sdb.promo === "function" ? sdb.promo() : null);
   const t = token();
   if (!t) { sdb.ir('/'); return; }
   document.getElementById('nao').href = '/obrigado?t=' + t;
@@ -81,7 +82,7 @@ window.gtag=window.gtag||function(){dataLayer.push(arguments);};</script>
     document.querySelectorAll('[data-preco]').forEach(e => { e.textContent = brl(p.valor); });
     $('preco').innerHTML = p.promo ? `<s style="font-size:1.4rem;opacity:.55;margin-right:8px">${brl(p.cheio)}</s>${brl(p.valor)}` : brl(p.valor);
     // Black Friday (assets/config-publico.js → PROMO_SAZONAL): só dá nome ao desconto das 24 h; some sozinha no fim do prazo
-    const bf = p.promo && p.fase !== 'ultima' ? sdb.promo() : null;
+    const bf = p.promo && p.fase !== 'ultima' ? promoNome() : null;
     $('tagPromo').hidden = !bf; if (bf) $('tagPromo').textContent = bf;
     $('precoSub').textContent = p.promo
       ? `pagamento único · ${bf ? `desconto de ${bf} nas primeiras 24 horas do seu cadastro` : 'preço das primeiras 24 horas'} · Pix ou cartão · depois ${brl(p.cheio)}`
