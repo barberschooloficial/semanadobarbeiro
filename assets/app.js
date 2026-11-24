@@ -1,6 +1,7 @@
 // App de aulas da Semana do Barbeiro
 (() => {
   const { api, store, qs, ir, caminho, token, maskWhats, maskCpf, toast, esc, quando, brl, pixel, C } = sdb;
+  const promoNome = () => (typeof sdb.promo === "function" ? sdb.promo() : null); // Black Friday etc. (tolera common.js antigo em cache)
   const $ = (id) => document.getElementById(id);
   let T = token();
   let estado = null;
@@ -408,7 +409,7 @@
       <div class="foto-fundo" style="background-image:url('/assets/img/bancada.jpg')"></div>
       <div class="oferta-grid">
         <div>
-          <span class="tag cheia">${sdb.promo() ? `${esc(sdb.promo())} · só para quem participou` : 'Condição de encerramento · só para quem participou'}</span>
+          <span class="tag cheia">${promoNome() ? `${esc(promoNome())} · só para quem participou` : 'Condição de encerramento · só para quem participou'}</span>
           <h2>Curso completo<span class="script">Barber School</span></h2>
           <p style="color:#d9ccb2">Gostou das aulas da semana? No curso completo você aprende o resto, do básico ao avançado, no seu ritmo.</p>
           <ul class="list-ok">${itens}</ul>
@@ -419,7 +420,7 @@
           <div class="price"><s>${brl(o.preco_de)}</s>${brl(o.preco_por)}</div>
           <p class="small" style="color:#c9b994">${esc(o.parcelas || '')}</p>
           <a class="btn green" id="btnCurso" data-track="checkout_clique" href="${esc(o.checkout)}">Quero o curso por ${brl(o.preco_por)}</a>
-          <p class="small" style="color:#a8997f;margin:10px 0 0">${sdb.promo() ? `Desconto de ${esc(sdb.promo())} até` : 'Até'} ${esc(quando(o.fecha_em))}. Depois volta para ${brl(o.preco_de)}.</p>
+          <p class="small" style="color:#a8997f;margin:10px 0 0">${promoNome() ? `Desconto de ${esc(promoNome())} até` : 'Até'} ${esc(quando(o.fecha_em))}. Depois volta para ${brl(o.preco_de)}.</p>
         </div>
       </div>
     </section>`;
@@ -446,7 +447,7 @@
   // Preço do certificado: de R$ 47,70 por R$ 19,70 (24 h do cadastro ou última chance de 10 min), no Pix ou no cartão
   function precoCertHtml(c) {
     if (!c.promo) return `<div class="price" style="font-size:2.4rem">${brl(c.preco || 19.7)}</div>`;
-    const ult = c.promo_fase === 'ultima', bf = sdb.promo();
+    const ult = c.promo_fase === 'ultima', bf = promoNome();
     const rotulo = ult ? 'Última chance' : bf ? `Desconto de ${esc(bf)} nas primeiras 24 horas` : 'Preço das primeiras 24 horas';
     return `${bf && !ult ? `<span class="tag cheia" style="margin:6px 0 8px">${esc(bf)}</span>` : ''}<div class="price" style="font-size:2.4rem"><s>${brl(c.preco_cheio)}</s>${brl(c.preco)}</div>
       <p class="small" style="margin:4px 0 6px"><b>${rotulo}</b>, no Pix ou no cartão. Depois volta para ${brl(c.preco_cheio)}.</p>
@@ -512,7 +513,7 @@
     if (produto === 'certificado') {
       const c = s.certificado;
       $('cpfTitulo').textContent = c.promo ? `Certificado — de ${brl(c.preco_cheio)} por ${brl(c.preco)}` : `Certificado — ${brl(c.preco || 19.7)}`;
-      $('cpfTexto').textContent = c.promo ? `Informe seu CPF para emitir a cobrança. ${sdb.promo() && c.promo_fase !== 'ultima' ? `Desconto de ${sdb.promo()}` : 'Preço promocional'}${c.promo_ate ? ` até ${quando(c.promo_ate)}` : ''}, no Pix ou no cartão.` : 'Informe seu CPF para emitir a cobrança. Você paga com Pix ou cartão.';
+      $('cpfTexto').textContent = c.promo ? `Informe seu CPF para emitir a cobrança. ${promoNome() && c.promo_fase !== 'ultima' ? `Desconto de ${promoNome()}` : 'Preço promocional'}${c.promo_ate ? ` até ${quando(c.promo_ate)}` : ''}, no Pix ou no cartão.` : 'Informe seu CPF para emitir a cobrança. Você paga com Pix ou cartão.';
     } else {
       $('cpfTitulo').textContent = `Barbeearia — ${brl(s.barberhub.preco)}${s.barberhub.ciclo === 'UNICO' ? '' : '/mês'}`;
       $('cpfTexto').textContent = 'Informe seu CPF para emitir a cobrança. Você paga com Pix, cartão ou boleto.';
